@@ -1,0 +1,25 @@
+{
+  "id": "./index.html",
+  "name": "Gromonsters",
+  "short_name": "Gromonsters",
+  "description": "Et læringsspil for børn på 6 til 9 år.",
+  "lang": "da",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "theme_color": "#0b1430",
+  "background_color": "#0b1430",
+  "icons": [
+    {
+      "src": "assets/ui/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/ui/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

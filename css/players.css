@@ -1,0 +1,74 @@
+/* Players: the title's "Hvem spiller?" row, the name step in setup, the parent page's Spillere tab. SPEC-2.md 6. Stage pixels. */
+
+/* ---------- title with players ---------- */
+.has-players .logo{top:22px}
+.has-players .logo-img{width:600px}
+.has-players .logo-sub{font-size:46px}
+.has-players .play-btn{top:290px}
+.play-btn.play-as{max-width:720px;white-space:nowrap;font-size:46px}
+.play-btn.play-as span{overflow:hidden;text-overflow:ellipsis}
+.who-wrap{position:absolute;right:28px;bottom:24px;display:flex;flex-direction:column;align-items:flex-end;gap:10px;z-index:4}
+.who-head{display:flex;align-items:center;justify-content:space-between;gap:20px;align-self:stretch;min-width:420px}
+.who-title{font-size:40px;-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;text-shadow:0 3px 0 var(--ink),0 0 20px rgba(69,200,255,.5)}
+.manage-btn{min-height:var(--tap);padding:0 22px;font-size:22px;gap:10px;border-radius:999px;
+  background:linear-gradient(180deg,rgba(44,63,134,.92),rgba(19,31,72,.95))}
+.manage-btn .ico{width:24px;height:24px;color:var(--gold)}
+.who-wrap .profile-row{position:static;display:flex;gap:16px;justify-content:flex-end}
+.who-wrap .profile-card{width:204px;height:226px;padding:8px 10px 12px;animation:pop-in .4s var(--spring) both}
+.who-wrap .profile-card:nth-child(2){animation-delay:.05s} .who-wrap .profile-card:nth-child(3){animation-delay:.1s}
+.who-wrap .profile-card:nth-child(4){animation-delay:.15s} .who-wrap .profile-card:nth-child(5){animation-delay:.2s}
+.who-wrap .profile-pic{width:134px;height:134px;margin-top:-14px;margin-bottom:-6px}
+.who-wrap .profile-info{gap:3px}
+.who-wrap .profile-name{font-size:25px}
+.profile-grade{font-size:17px;color:var(--paper-dim);line-height:1.1}
+.profile-aurora{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:3px}
+.profile-aurora .pa-lv{font-family:var(--display);font-weight:600;font-size:16px;color:#fff;line-height:1}
+.who-wrap .mini-bands i{width:18px;height:12px}
+.who-wrap .profile-card.new{gap:12px}
+.who-wrap .profile-card.new .profile-name{white-space:normal;text-align:center}
+
+/* ---------- setup: the name step (kept in the upper half: the keyboard covers the rest) ---------- */
+.step-name .setup-q{top:44px}
+.name-form{position:absolute;left:0;right:0;top:150px;display:flex;justify-content:center;align-items:center;gap:20px}
+.name-form.nope{animation:wobble .35s}
+.name-field{width:560px;height:104px;border-radius:var(--r-l);border:4px solid var(--ink);background:var(--paper);color:var(--ink);
+  font:700 52px var(--display);padding:0 30px;text-align:center;user-select:text;-webkit-user-select:text;
+  box-shadow:inset 0 4px 0 rgba(11,20,48,.12),0 0 0 4px rgba(69,200,255,.55),0 14px 30px rgba(0,0,0,.45);outline:none}
+.name-field:focus{box-shadow:inset 0 4px 0 rgba(11,20,48,.12),0 0 0 6px var(--aur-2),0 0 34px rgba(45,224,208,.6),0 14px 30px rgba(0,0,0,.45)}
+.name-field::placeholder{color:#8f9bc0;font-weight:600}
+.name-next{min-width:260px}
+.name-next .ico{width:36px;height:36px}
+.name-next.is-off{filter:grayscale(.6) brightness(.85)}
+.name-skip{position:absolute;left:50%;top:290px;transform:translateX(-50%);font-size:26px;min-width:240px;border-radius:999px;
+  background:linear-gradient(180deg,rgba(44,63,134,.85),rgba(19,31,72,.9))}
+.name-skip:active{transform:translateX(-50%) translateY(5px) scale(.98)}
+
+/* ---------- setup: a bigger, clearer kind chip on the starter pick ---------- */
+.step-starter .starter-tag{top:336px;gap:12px}
+.step-starter .el-chip{height:60px;padding:0 24px 0 8px;gap:10px;font-size:30px;font-weight:700;border-width:3px;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.55),0 4px 0 var(--ink)}
+.el-ico-wrap{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:rgba(11,20,48,.85);font-size:30px;color:var(--glowc)}
+.el-ico-wrap .ico{width:30px;height:30px}
+.el-ico-wrap .el-ico{width:44px;height:44px}
+
+/* ---------- parent page: voice note and the Spillere tab ---------- */
+.set-note{font-size:17px;color:var(--paper-dim);line-height:1.25}
+.pl-list{display:flex;flex-direction:column;gap:12px}
+.pl-row{display:flex;align-items:center;gap:20px;padding:10px 20px;border-radius:var(--r-m);background:rgba(11,20,48,.78);border:2px solid var(--line);animation:rise-in .35s var(--out) both}
+.pl-row.open{border-color:rgba(255,211,77,.7)}
+.pl-pic{width:84px;height:84px;flex:none}
+.pl-namebox{display:flex;flex-direction:column;gap:4px;width:300px;flex:none}
+.pl-name{height:72px;font-size:28px}
+.pl-now{font-size:15px;color:var(--gold);padding-left:6px}
+.pl-class{display:flex;flex-direction:column;gap:2px}
+.pl-cap{font-size:14px;color:var(--paper-dim);padding-left:4px;line-height:1}
+.pl-row .seg{flex-wrap:nowrap}
+.pl-row .seg-btn{min-width:72px;min-height:72px;justify-content:center;font-size:26px}
+.pl-del{margin-left:auto;font-size:22px;padding:0 22px;white-space:nowrap}
+.pl-del .ico{width:22px;height:22px}
+.pl-ask-wrap{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:rgba(3,6,15,.6)}
+.pl-ask{width:620px;padding:30px 40px 36px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center}
+.pl-ask-pic{width:150px;height:150px}
+.pl-ask-q{font-size:36px;line-height:1.2;overflow-wrap:anywhere}
+.pl-ask-btns{display:flex;gap:24px;margin-top:6px}
+.pl-ask-btns .btn{min-width:200px;font-size:30px}
