@@ -62,7 +62,10 @@ window.G = window.G || {};
   function fixProfile(p) {
     p.dex = p.dex || {}; p.away = p.away || {}; p.stats = p.stats || { battles: 0, minutes: {} };
     p.stats.minutes = p.stats.minutes || {}; p.sparks = p.sparks | 0; p.dayOffset = p.dayOffset | 0; p.limitMin = p.limitMin | 0;
+    // play notes 4: the steps he has watched the wild one think through, by step id (an old save starts with none)
+    if (!p.watched || typeof p.watched !== 'object' || Array.isArray(p.watched)) p.watched = {};
     migrateKraft(p);
+    migrateForms(p);
     migrateTeam(p);
     migrateWorld(p);
     return p;
@@ -72,8 +75,14 @@ window.G = window.G || {};
     var caughtIds = Object.keys(p.dex).filter(function (id) { var e = p.dex[id]; return id !== p.starter && e && (e.stage === 'caught' || e.stage === 'grown'); });
     if (!p.xp || typeof p.xp !== 'object') {
       p.xp = {};
-      if (p.starter) p.xp[p.starter] = p.evolved ? G.LEVEL_XP[4] : 0;
-      caughtIds.forEach(function (id) { p.xp[id] = p.dex[id].stage === 'grown' ? G.LEVEL_XP[2] : 0; });
+      // a save from before power: the wins the old marks gave, and the forms it had are kept (p.keep), not paid for in power
+      p.keep = p.keep && typeof p.keep === 'object' ? p.keep : {};
+      if (p.starter) { p.xp[p.starter] = p.evolved ? OLD_MARKS.evolved : 0; if (p.evolved) p.keep[p.starter] = 5; }
+      caughtIds.forEach(function (id) {
+        var grown = p.dex[id].stage === 'grown';
+        p.xp[id] = grown ? OLD_MARKS.grown : 0;
+        if (grown) p.keep[id] = Math.max(3, p.keep[id] | 0);
+      });
     }
     if (!Array.isArray(p.team)) {
       var newest = caughtIds.slice().sort(function (a, b) { return (p.dex[b].caughtDay | 0) - (p.dex[a].caughtDay | 0); });
@@ -88,20 +97,34 @@ window.G = window.G || {};
     // the stage follows the Level: Level 3 or more is grown
     [p.starter].concat(caughtIds).forEach(function (id) {
       var e = p.dex[id]; if (!e) return;
-      if (levelNum(p.xp[id] | 0) >= 3 && e.stage === 'caught') { e.stage = 'grown'; if (e.grownDay == null) e.grownDay = e.caughtDay; }
+      if (levelAt(id, p.xp[id] | 0, p) >= 3 && e.stage === 'caught') { e.stage = 'grown'; if (e.grownDay == null) e.grownDay = e.caughtDay; }
     });
-    if (p.starter) p.evolved = levelNum(p.xp[p.starter] | 0) >= 5;
+    if (p.starter) p.evolved = levelAt(p.starter, p.xp[p.starter] | 0, p) >= 5;
   }
 
   // Power was 100 plus 5 for every right answer; now it is 1 plus 1 for every battle won. An old save keeps its
   // forms: what was grown (12 right answers) or in its next form (32) stays so, and the rest shrinks to match.
+  // OLD_MARKS are the wins at which the forms came when this was written (grown at 3 wins, the next form at 8).
+  var OLD_MARKS = { grown: 3, evolved: 8 };
   function migrateKraft(p) {
-    if (p.kv === 2) return;
+    if (p.kv >= 2) return;
     if (p.xp && typeof p.xp === 'object') Object.keys(p.xp).forEach(function (id) {
-      var old = Math.max(0, p.xp[id] | 0), T = G.LEVEL_XP;
-      p.xp[id] = old >= 32 ? T[4] + Math.round((old - 32) / 20) : old >= 12 ? Math.min(T[4] - 1, T[2] + Math.floor((old - 12) / 5)) : Math.min(T[2] - 1, Math.floor(old / 4));
+      var old = Math.max(0, p.xp[id] | 0), g = OLD_MARKS.grown, e = OLD_MARKS.evolved;
+      p.xp[id] = old >= 32 ? e + Math.round((old - 32) / 20) : old >= 12 ? Math.min(e - 1, g + Math.floor((old - 12) / 5)) : Math.min(g - 1, Math.floor(old / 4));
     });
     p.kv = 2;
+  }
+  // Play notes of 2026-11-15: the forms come much later (grown at power 10, the next form at power 100). A Gromonster
+  // that had already grown or changed form under the old marks keeps that form (p.keep), whatever its power is now.
+  function migrateForms(p) {
+    if (p.kv >= 3) return;
+    p.keep = p.keep && typeof p.keep === 'object' ? p.keep : {};
+    if (p.xp && typeof p.xp === 'object') Object.keys(p.xp).forEach(function (id) {
+      var w = Math.max(0, p.xp[id] | 0), had = w >= OLD_MARKS.evolved ? 5 : w >= OLD_MARKS.grown ? 3 : 0;
+      if (had) p.keep[id] = Math.max(had, p.keep[id] | 0);
+    });
+    if (p.evolved && p.starter) p.keep[p.starter] = 5;
+    p.kv = 3;
   }
 
   // milestone 1, slice 2: regions open by team power and stay open; one new friend a day from those beaten today.
@@ -121,8 +144,13 @@ window.G = window.G || {};
   }
 
   // ---------- team, Level and strength ----------
-  G.LEVEL_XP = [0, 1, 3, 5, 8, 12, 16, 21, 26, 32]; // battles won; the forms change at Level 3 and Level 5
+  // battles won; the Level itself is never shown. The forms change at Level 3 (grown, power 10), Level 5 (the next form,
+  // power 100) and Level 7 (a third form at power 500, for when its pictures exist).
+  G.LEVEL_XP = [0, 3, 9, 39, 99, 249, 499];
   function levelNum(xp) { var n = 0; G.LEVEL_XP.forEach(function (t) { if (xp >= t) n++; }); return Math.max(1, n); }
+  // the Level of one Gromonster at a given number of wins: never under a form it already had (p.keep)
+  function levelAt(id, xp, p) { p = p || G.profile; return Math.max(levelNum(Math.max(0, xp | 0)), (p && p.keep && p.keep[id]) | 0); }
+  G.levelAt = levelAt;
   G.levelOf = function (xp) {
     xp = Math.max(0, xp | 0);
     var L = levelNum(xp), T = G.LEVEL_XP;
@@ -144,6 +172,7 @@ window.G = window.G || {};
   // the two form marks as power: grown at Level 3, the next form at Level 5 (the Level itself is never shown)
   G.GROW_KRAFT = G.KRAFT0 + G.KRAFT_STEP * G.LEVEL_XP[2];
   G.EVOLVE_KRAFT = G.KRAFT0 + G.KRAFT_STEP * G.LEVEL_XP[4];
+  G.isGrown = function (id, p) { return G.levelFor(id, p) >= 3; };
   // team power: the power of everyone on the team added up. It opens the next region.
   G.teamKraft = function (p) {
     p = p || G.profile; if (!p) return 0;
@@ -151,7 +180,7 @@ window.G = window.G || {};
   };
   G.energyFor = function (level) { return level >= 8 ? 6 : level >= 5 ? 5 : level >= 3 ? 4 : 3; };
   G.xpOf = function (id, p) { p = p || G.profile; return (p && p.xp && p.xp[id]) | 0; };
-  G.levelFor = function (id, p) { return levelNum(G.xpOf(id, p)); };
+  G.levelFor = function (id, p) { return levelAt(id, G.xpOf(id, p), p); };
   // the picture id to show for a base id: the evolved form at Level 5 or more
   G.formId = function (p, baseId) {
     p = p || G.profile; if (!baseId) return null;
@@ -224,7 +253,7 @@ window.G = window.G || {};
     var p = fixProfile({
       name: '', grade: o.grade | 0, levels: o.levels || null, starter: o.starter, evolved: false, created: day, sparks: 0,
       dex: {}, away: {}, daily: null, brain: null, stats: { battles: 0, minutes: {} },
-      introDone: false, dayOffset: 0, limitMin: 0, team: [o.starter, null, null], xp: {}, opened: ['bay'], dayLog: null, kv: 2
+      introDone: false, dayOffset: 0, limitMin: 0, team: [o.starter, null, null], xp: {}, opened: ['bay'], dayLog: null, kv: 3, keep: {}, watched: {}
     });
     p.xp[o.starter] = 0;
     p.dex[o.starter] = { stage: 'caught', metDay: day, caughtDay: day, grownDay: null };
@@ -327,13 +356,13 @@ window.G = window.G || {};
     if (!e) p.dex[w] = e = { stage: 'met', metDay: d, caughtDay: null, grownDay: null };
     var newFriend = null;
     if (res === 'caught') {
-      // only the protected first battle ends in a friend by itself; it is that day's friend
+      // only the first battle ends in a friend by itself (won on any try); it is that day's friend
       if (e.stage === 'met') { p.dex[w] = { stage: 'caught', metDay: e.metDay != null ? e.metDay : d, caughtDay: d, grownDay: null }; newFriend = w; }
       if (!dl.friend) dl.friend = w;
     } else if (res === 'won' && ctx.mode !== 'train' && !G.isCaught(w, p)) {
       if (dl.beaten.indexOf(w) < 0) dl.beaten.push(w);
     }
-    // the protected first battle counts as done only once Crabbi is really a friend
+    // the first battle counts as done only once Crabbi is really a friend: a lost first battle is tried again
     if (ctx.mode === 'intro' && res === 'caught') p.introDone = true;
     p.stats.battles = (p.stats.battles | 0) + 1;
     // power: +1 for the one that won the battle. The battle reports who that was (xpBy); without it the fighter gets it.
@@ -346,7 +375,7 @@ window.G = window.G || {};
       var add = by ? Math.min(1, Math.max(0, Math.round(+by[id] || 0))) : (i === 0 ? countXp : 0);
       if (!add) return;
       gainXp = Math.max(gainXp, add);
-      var from = G.xpOf(id, p), to = from + add, lf = levelNum(from), lt = levelNum(to);
+      var from = G.xpOf(id, p), to = from + add, lf = levelAt(id, from, p), lt = levelAt(id, to, p);
       p.xp[id] = to;
       teamGain.push({ id: id, place: i, from: from, to: to, kraftFrom: G.KRAFT0 + G.KRAFT_STEP * from, kraftTo: G.KRAFT0 + G.KRAFT_STEP * to, levelFrom: lf, levelTo: lt });
       var en = p.dex[id];
@@ -425,7 +454,7 @@ window.G = window.G || {};
     if (!v) return;
     try {
       speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(text); u.voice = v; u.lang = v.lang; u.rate = 0.95;
+      var u = new SpeechSynthesisUtterance(String(text).replace(/\[en\]\s*/g, '')); u.voice = v; u.lang = v.lang; u.rate = 0.95;
       speechSynthesis.speak(u);
     } catch (e) { /* no voice: silent */ }
   };
@@ -685,6 +714,39 @@ window.G = window.G || {};
     livingCount: livingCount
   };
   // a still picture for lists (dex, map, cards): no WebGL. Missing picture = silhouette blob.
+  /* Today's friend (Steve's play notes 4: "make it clear that you can maximum get 1 new gromonster a day"). One round
+     mark, the same picture language in three places: the map (where he picks a wild one), the card after a win, and camp
+     (where the day's friend is picked). No words: a child who can not read sees the state.
+       open    no friend today yet and nobody to pick: an empty dashed ring with a faint paw, a pale heart
+       ready   no friend today yet, and one he beat can be picked: a gold ring that pulses, a gold paw (or that one's face)
+       filled  today's friend is chosen: its face in a green ring, a pink heart, and a moon with a star: a new one tomorrow
+     G.todayMark(host, {state, id}) fills host (any element) and returns it. G.todayState() is today's state now. */
+  G.todayState = function () {
+    var f = G.friendToday ? G.friendToday() : null;
+    if (f) return { state: 'filled', id: f };
+    // one he beat today can be picked: the newest of them shows faintly in the gold ring, as on the card after the win
+    var can = G.friendChoices ? G.friendChoices() : [];
+    return can.length ? { state: 'ready', id: can[can.length - 1] } : { state: 'open', id: null };
+  };
+  var TM_HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5S3.2 15 3.2 8.9A4.6 4.6 0 0112 6.6a4.6 4.6 0 018.8 2.3c0 6.1-8.8 11.6-8.8 11.6z" fill="currentColor" stroke="#0b1430" stroke-width="1.9" stroke-linejoin="round"/></svg>';
+  var TM_MOON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.2 15.6A7.4 7.4 0 0 1 8.2 5.2a7.4 7.4 0 1 0 9 10.4z" fill="#ffd34d" stroke="#0b1430" stroke-width="1.6" stroke-linejoin="round"/><path d="M17.6 4.2l.8 1.7 1.8.3-1.3 1.3.3 1.8-1.6-.9-1.6.9.3-1.8-1.3-1.3 1.8-.3z" fill="#fff6c9"/></svg>';
+  G.todayMark = function (host, o) {
+    o = o || {};
+    var state = o.state === 'filled' || o.state === 'ready' ? o.state : 'open';
+    host.classList.remove('tm-open', 'tm-ready', 'tm-filled');
+    host.classList.add('tm', 'tm-' + state);
+    host.innerHTML = '';
+    var face = G.el('span', 'tm-face');
+    if (o.id && G.creatures && G.creatures[o.id]) face.appendChild(G.picture(G.formId ? G.formId(G.profile, o.id) || o.id : o.id));
+    else face.innerHTML = G.icon('paw');
+    if (o.id && state === 'ready') face.classList.add('is-maybe');
+    host.appendChild(face);
+    host.appendChild(G.el('span', 'tm-heart', TM_HEART));
+    if (state === 'filled') host.appendChild(G.el('span', 'tm-moon', TM_MOON));
+    host.dataset.today = state;
+    return host;
+  };
+
   G.picture = function (id, cls) {
     var c = (G.creatures && G.creatures[id]) || {}, w = G.el('div', 'pic ' + (cls || ''));
     var im = new Image(); im.alt = ''; im.draggable = false;

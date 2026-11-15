@@ -16,7 +16,8 @@ window.G = window.G || {};
   var NAME_MAX = 12;
   var STARTERS = ['mosli', 'kulli', 'narli'];
   var hosts = [], grade = 0, levels = null, picked = null, sid = 0, name = '';
-  var TOPICS = ['tal', 'ord', 'logik'];
+  // the topics of this game language, from the brain's one list (Engelsk only in a Danish game)
+  function topics() { return G.Brain && G.Brain.topicsFor ? G.Brain.topicsFor(G.lang) : ['tal', 'ord', 'logik']; }
 
   function clear() { hosts.forEach(function (h) { h.destroy(); }); hosts = []; }
 
@@ -86,10 +87,11 @@ window.G = window.G || {};
   // The game starts a little under the level and climbs to it within a few answers, then follows the child.
   function stepLevel(root, body) {
     clear(); body.innerHTML = ''; body.className = 'setup-body step-level';
-    levels = levels || { tal: grade, ord: grade, logik: grade };
+    var TOPICS = topics(), turn = {}, lastId = null; // which kind of task of the level is on show; "Vis en anden" moves to the next kind
+    levels = levels || {};
+    TOPICS.forEach(function (pw) { if (levels[pw] == null) levels[pw] = grade; turn[pw] = 0; });
     body.appendChild(G.el('div', 'setup-q h rise-in', G.t('setup.level')));
-    var rows = G.el('div', 'lv-rows rise-in'), ex = G.el('div', 'lv-ex panel rise-in'), sample = null, shown = 'tal', ui = null;
-    var turn = { tal: 0, ord: 0, logik: 0 }, lastId = null; // which kind of task of the level is on show; "Vis en anden" moves to the next kind
+    var rows = G.el('div', 'lv-rows rise-in n' + TOPICS.length), ex = G.el('div', 'lv-ex panel rise-in'), sample = null, shown = TOPICS[0], ui = null;
     try { sample = G.Brain.create(null, { grade: grade, lang: G.lang }); } catch (e) { console.error(e); }
     function example() {
       if (ui && ui.destroy) { try { ui.destroy(); } catch (e) { /* gone */ } } ui = null;
@@ -102,6 +104,11 @@ window.G = window.G || {};
       head.appendChild(G.el('span', 'lv-ico', G.powers[shown].icon));
       var nm = G.el('b', 'lv-ex-name'); nm.textContent = e.name || G.tx(G.powers[shown].name); head.appendChild(nm);
       if (e.kinds > 1) { var cnt = G.el('span', 'lv-ex-count num'); cnt.textContent = (e.at + 1) + ' / ' + e.kinds; head.appendChild(cnt); }
+      // a listening task's word is only in what the voice says: the grown-up can hear the example too
+      var hear = G.el('button', 'btn btn-round lv-hear', G.icon('speaker')); hear.type = 'button'; hear.dataset.act = 'example-say';
+      hear.setAttribute('aria-label', G.t('b.again') !== 'b.again' ? G.t('b.again') : 'Hør');
+      (function (task) { G.tap(hear, function () { G.say(task.say || task.prompt, { cut: true }); }); })(e.task);
+      head.appendChild(hear);
       var more = G.el('button', 'btn lv-more', G.t('setup.other')); more.type = 'button'; more.dataset.act = 'level-other';
       G.tap(more, function () { turn[shown]++; example(); });
       head.appendChild(more);

@@ -8,7 +8,7 @@ window.G = window.G || {};
 
   var MUSIC_NAMES = ['title', 'camp', 'map', 'battle', 'heart'];
   var SFX_NAMES = ['tap', 'pick', 'unpick', 'right', 'super', 'miss', 'hit', 'shield', 'charge', 'ready', 'special',
-    'wildhit', 'breatheIn', 'breatheOut', 'catch', 'slip', 'spark', 'aurora', 'grow', 'evolve', 'open', 'locked', 'step', 'win'];
+    'wildhit', 'breatheIn', 'breatheOut', 'catch', 'slip', 'spark', 'aurora', 'grow', 'evolve', 'open', 'locked', 'step', 'win', 'splash', 'snap'];
 
   function mtof(m) { return 440 * Math.pow(2, (m - 69) / 12); }
   function clamp01(v) { v = +v; return isFinite(v) ? Math.max(0, Math.min(1, v)) : null; }
@@ -587,6 +587,19 @@ window.G = window.G || {};
       tone(c, o, t, { f: f * 4, d: 0.012, v: 0.12 });
       V.bell(c, w, t, m + 12, 0.1, 0.06, { ratio: 2, decay: 0.2 });
     },
+    // a thing dropping into the tub (Natur og teknik, slice 5): a soft wash of noise and a low plop
+    splash: function (c, o, w, t) {
+      noiseHit(c, o, t, 'bandpass', 900, 0.7, 0.01, 0.12, 0.5, 300);
+      noiseHit(c, w, t + 0.03, 'highpass', 2600, 0.6, 0.02, 0.16, 0.25);
+      tone(c, o, t, { f: 260, f2: 120, glide: 0.12, d: 0.08, v: 0.45 });
+    },
+    // a puzzle piece locking into place (rhyme pieces, play notes 4): a short wooden knock with a bright tick on top
+    snap: function (c, o, w, t) {
+      noiseHit(c, o, t, 'highpass', 3200, 0.8, 0.001, 0.025, 0.55);
+      tone(c, o, t, { type: 'triangle', f: 880, f2: 620, glide: 0.03, d: 0.035, v: 0.35 });
+      tone(c, o, t + 0.004, { f: 210, f2: 150, glide: 0.04, d: 0.06, v: 0.5, lp: 1200 });
+      V.bell(c, w, t + 0.02, 79, 0.1, 0.1, { ratio: 1.41, index: 0.5, decay: 0.12 });
+    },
     win: function (c, o, w, t) {
       [[72, 0], [76, 0.1], [79, 0.2]].forEach(function (n) { brass(c, o, t + n[1], n[0], 0.08, 0.17); });
       brass(c, o, t + 0.3, 84, 0.5, 0.2);
@@ -598,7 +611,7 @@ window.G = window.G || {};
   var TRIM = {
     tap: 3.1, pick: 3, unpick: 5, right: 0.73, super: 0.68, miss: 2.6, hit: 1.9, shield: 0.8, charge: 1.25, ready: 0.75,
     special: 0.42, wildhit: 2.3, breatheIn: 2.4, breatheOut: 2.2, catch: 0.65, slip: 1.7, spark: 1.8, aurora: 0.72,
-    grow: 0.88, evolve: 0.38, open: 2.3, locked: 1.25, step: 5, win: 0.86
+    grow: 0.88, evolve: 0.38, open: 2.3, locked: 1.25, step: 5, win: 0.86, splash: 2, snap: 2.2
   };
 
   function playSfx(eng, name, t, r, offline) {
@@ -700,6 +713,18 @@ window.G = window.G || {};
     try { playSfx(eng, name, t + 0.005, srand); } catch (e) { /* ignore */ }
   }
 
+  // A plucked string at a given pitch (the light and deep tones of Natur og teknik): the pitch is the lesson, so it is
+  // made here from the string's length (src/content/natur.js midiOf), not recorded.
+  function pluck(midi) {
+    if (!eng || !ctx || ctx.state === 'closed' || document.hidden) return;
+    var m = Math.max(36, Math.min(84, Math.round(+midi) || 60)), t = ctx.currentTime + 0.005;
+    try {
+      var g = ctx.createGain(); g.gain.value = SFX_GAIN * 2.4; g.connect(eng.sfxDry);
+      V.pluck(ctx, g, t, m, 1.2, 0.9, { bright: 0.55, cut: 2600 + (m - 48) * 60 });
+      setTimeout(function () { try { g.disconnect(); } catch (e) { /* gone */ } }, 2500);
+    } catch (e) { /* never break the game for a sound */ }
+  }
+
   function setVolume(v) {
     if (!v || typeof v !== 'object') return;
     var m = clamp01(v.music), s = clamp01(v.sfx);
@@ -740,6 +765,7 @@ window.G = window.G || {};
     duckUntil: duckUntil,
     music: music,
     sfx: sfx,
+    pluck: pluck,
     setVolume: setVolume,
     setMusicOn: setMusicOn,
     _render: render,

@@ -1,4 +1,4 @@
-/* Content: ord (letters, spelling, words, English). Word lists in Danish, Swedish, Norwegian bokmål and British English.
+/* Content: ord (letters, spelling, words; in an English game also opposites and sound-alike words). Word lists in Danish, Swedish, Norwegian bokmål and British English.
    Rule for every list: common, unambiguous, spelled exactly right; a picture must name one word only. When in doubt, left out (null).
    L9: `say` never reads a word the child must read; it may name the picture (spelling from a picture, first sound). */
 (function () {
@@ -271,13 +271,6 @@
     compHS: { da: 'Sammen bliver de to ord til et nyt ord.', sv: '{a} + {b} = {ab}.', no: '{a} + {b} = {ab}.', en: '{a} + {b} = {ab}.' },
     compH0: { da: 'Sig hvert ord efter {w}. Kun ét af dem giver et rigtigt ord.', sv: 'Prova varje ord efter {w}. Bara ett blir ett riktigt ord.', no: 'Prøv hvert ord etter {w}. Bare ett blir et ekte ord.', en: 'Try each word after {w}. Only one makes a real word.' },
     compOk: { da: 'Flot. To ord blev til ét.', sv: 'Rätt: två ord blev ett.', no: 'Riktig: to ord ble til ett.', en: 'Right: two words became one.' },
-    enP: { da: 'Hvad hedder det på engelsk?', sv: 'Vad heter det på engelska?', no: 'Hva heter det på engelsk?', en: '' },
-    enS: { da: 'Hvad hedder {w} på engelsk?', sv: 'Vad heter {w} på engelska?', no: 'Hva heter {w} på engelsk?', en: '' },
-    enH: { da: '{W} hedder {e} på engelsk.', sv: '{W} heter {e} på engelska.', no: '{W} heter {e} på engelsk.', en: '' },
-    enOk: { da: 'Flot, det er det engelske ord!', sv: 'Rätt: {e} är det engelska ordet.', no: 'Riktig: {e} er det engelske ordet.', en: '' },
-    enSpP: { da: 'Stav det på engelsk', sv: 'Stava det på engelska', no: 'Stav det på engelsk', en: '' },
-    enSpS: { da: 'Stav {w} på engelsk.', sv: 'Stava {w} på engelska.', no: 'Stav {w} på engelsk.', en: '' },
-    enSpH2: { da: '{E} staves {s}.', sv: '{E} stavas {s}.', no: '{E} staves {s}.', en: '' },
     oppP: { da: 'Hvad er det modsatte?', sv: 'Vad är motsatsen?', no: 'Hva er det motsatte?', en: 'What is the opposite?' },
     oppS: { da: 'Hvilket ord betyder det modsatte?', sv: 'Vad är motsatsen till ordet?', no: 'Hva er det motsatte av ordet?', en: 'What is the opposite of the word?' },
     oppH: { da: 'Det modsatte af {t} er {o}.', sv: 'Motsatsen till {t} är {o}.', no: 'Det motsatte av {t} er {o}.', en: 'The opposite of {t} is {o}.' },
@@ -300,7 +293,6 @@
     spellS: '{W}. Stav ordet.', spellH1: 'Sig ordet langsomt, lyd for lyd.', spellH2: 'Sådan staves det. {s}',
     rhymeS: '{W}. Hvilket ord rimer på det?', rhymeH: '{W}. {R}. De ender på samme lyd.',
     compS: 'Hvilket ord kan du sætte efter det første ord, så du får et nyt ord?', compH0: 'Sig hvert ord efter det første ord. Kun ét af dem giver et rigtigt ord.',
-    enS: '{W}. Hvad hedder det på engelsk?', enH: 'Sådan hedder det på engelsk.', enSpS: '{W}. Stav det på engelsk.', enSpH2: 'Sådan staves det på engelsk. {s}',
     oppH: 'Se her. Det er det modsatte ord.', clsH2: 'Det her ord er et {c}.', gapH: 'Læs hele sætningen med det rigtige ord.'
   };
   // the spoken line: the Danish one when there is one, otherwise the text template
@@ -334,7 +326,7 @@
     return {
       ui: 'spell',
       prompt: tx(o.prompt || T.spellP, L),
-      say: sp(o.say || 'spellS', L, { w: picName, W: cap(picName) }),
+      say: o.sayText || sp(o.say || 'spellS', L, { w: picName, W: cap(picName) }),
       visual: { type: 'emoji', emoji: e },
       spell: { word: W1, tiles: pool },
       how: o.how || [
@@ -482,57 +474,26 @@
       key: { type: 'opposite', lang: L }
     };
   }
+  // o09, o10 and o13 belong to an English game only (opposites, longer words, sound-alike words). In a Danish game the
+  // English steps that sat here are their own topic, src/content/engelsk.js (slice 3). The ids stay: saves store them.
   step({
-    id: 'o09', grade: 4, name: { da: 'Engelske ord', sv: 'Engelska ord', no: 'Engelske ord', en: 'Opposites' },
-    pick: function (U, L) {
-      if (L === 'en') return { t: U.pick(OPP.en)[0] };
-      var list = LEX.filter(function (r) { return r[LI[L]] && r[4] && r[4] !== r[LI[L]]; });
-      return { e: U.pick(list)[0] };
-    },
-    key: function (p) { return p.t || p.e; },
-    make: function (p, L, U) {
-      if (L === 'en') return p.t ? oppTask(OPP.en, p.t, L, U) : null;
-      if (!p.e) return null;
-      var w = wordOf(p.e, L), en = wordOf(p.e, 'en');
-      if (!w || !en) return null;
-      var pool = LEX.filter(function (r) { return r[4] && r[4] !== en && r[4].charAt(0) !== en.charAt(0); }).map(function (r) { return r[4]; });
-      var wr = U.sample(pool, 2);
-      return {
-        ui: 'choice', prompt: tx(T.enP, L), say: sp('enS', L, { w: w, W: cap(w) }),
-        visual: { type: 'emoji', emoji: p.e },
-        choice: U.choice({ label: en }, wr.map(function (x) { return { label: x }; }), 3),
-        how: [H(tx(T.enH, L, { W: cap(w), e: en }), { type: 'emoji', emoji: p.e }, sp('enH', L, { W: cap(w), e: en }))],
-        praise: tx(T.enOk, L, { e: en }),
-        key: { type: 'english' }
-      };
-    }
+    id: 'o09', grade: 4, langs: ['en'], name: { da: 'Modsatte ord', sv: 'Motsatser', no: 'Motsatte ord', en: 'Opposites' },
+    pick: function (U, L) { return L === 'en' ? { t: U.pick(OPP.en)[0] } : null; },
+    key: function (p) { return p.t; },
+    make: function (p, L, U) { return L === 'en' && p.t ? oppTask(OPP.en, p.t, L, U) : null; }
   });
 
   step({
-    id: 'o10', grade: 4, name: { da: 'Stav på engelsk', sv: 'Stava på engelska', no: 'Stav på engelsk', en: 'Spell longer words' },
+    id: 'o10', grade: 4, langs: ['en'], name: { da: 'Stav lange ord', sv: 'Stava långa ord', no: 'Stav lange ord', en: 'Spell longer words' },
     pick: function (U, L) {
-      var list = L === 'en'
-        ? words('en').filter(function (x) { return x.w.length >= 7 && x.w.length <= 9; })
-        : LEX.filter(function (r) { return r[LI[L]] && r[4] && !close(r[4], r[LI[L]]) && r[4].length >= 3 && r[4].length <= 6; }).map(function (r) { return { e: r[0] }; });
-      return { e: U.pick(list).e, en: L === 'en' ? 1 : 0 };
+      if (L !== 'en') return null;
+      return { e: U.pick(words('en').filter(function (x) { return x.w.length >= 7 && x.w.length <= 9; })).e };
     },
     key: function (p) { return p.e; },
     make: function (p, L, U) {
       var en = wordOf(p.e, 'en');
-      if (!en) return null;
-      if (L === 'en') {
-        if (en.length < 7 || en.length > 9) return null;
-        return spellTask(p.e, en, L, U, 2);
-      }
-      if (en.length > 6) return null;
-      var w = wordOf(p.e, L);
-      if (!w) return null;
-      var ls = letters(en);
-      return spellTask(p.e, en, L, U, 2, {
-        prompt: T.enSpP, say: 'enSpS', picName: w, wordLang: 'en', alphaLang: 'en',
-        how: [H(tx(T.enH, L, { W: cap(w), e: en }), { type: 'emoji', emoji: p.e }, sp('enH', L, { W: cap(w), e: en })),
-          H(tx(T.enSpH2, L, { E: cap(en), s: ls.join('-') }), big(up(en)), sp('enSpH2', L, { E: cap(en), s: spLetters(ls, L) }))]
-      });
+      if (L !== 'en' || !en || en.length < 7 || en.length > 9) return null;
+      return spellTask(p.e, en, L, U, 2);
     }
   });
 
@@ -568,33 +529,168 @@
   });
 
   step({
-    id: 'o13', grade: 5, name: { da: 'Engelske sætninger', sv: 'Engelska meningar', no: 'Engelske setninger', en: 'Sound-alike words' },
-    pick: function (U, L) { var set = L === 'en' ? 'homo' : 'gap'; return { s: set, i: U.int(0, SENTENCES[set].length - 1) }; },
+    id: 'o13', grade: 5, langs: ['en'], name: { da: 'Ord der lyder ens', sv: 'Ord som låter lika', no: 'Ord som høres like', en: 'Sound-alike words' },
+    pick: function (U, L) { return L === 'en' ? { s: 'homo', i: U.int(0, SENTENCES.homo.length - 1) } : null; },
     key: function (p) { return p.s + p.i; },
     make: function (p, L, U) {
-      if ((L === 'en') !== (p.s === 'homo')) return null;
-      var it = SENTENCES[p.s][p.i];
+      if (L !== 'en' || p.s !== 'homo') return null;
+      var it = SENTENCES.homo[p.i];
       if (!it) return null;
       var full = it[0].replace('▢', it[1]);
-      var how = [H(tx(T.gapH, L, { s: full }), big(full), sp('gapH', L, { s: full }))];
-      if (p.s === 'homo') how.push(H(tx(T.homoH2, L, { a: cap(it[1]), b: it[2] }), big(it[1] + '  ' + it[2])));
       return {
         ui: 'choice', prompt: tx(T.gapP, L), say: tx(T.gapS, L),
         visual: big(it[0]),
         choice: U.choice({ label: it[1] }, it.slice(2).map(function (w) { return { label: w }; }), it.length - 1),
-        how: how,
+        how: [H(tx(T.gapH, L, { s: full }), big(full)), H(tx(T.homoH2, L, { a: cap(it[1]), b: it[2] }), big(it[1] + '  ' + it[2]))],
         praise: tx(T.gapOk, L),
-        key: { type: 'sentence', set: p.s }
+        key: { type: 'sentence', set: 'homo' }
       };
     }
   });
 
-  // The ladder in class order (ids stay as they are: saves store them).
-  var ORDER = ['o01', 'o02', 'o03', 'o04', 'o06', 'o05', 'o07', 'o11', 'o08', 'o12', 'o09', 'o10', 'o13'];
+  /* ---------------- grade 0, the class 0 pack (slice 4, 2026-11-15) ----------------
+     Three games for a child who cannot read yet, Danish only (they are about Danish sounds): clap the beats of a word,
+     drag the rhyming piece, and find a secret word letter by letter. Every word below has a painted picture and a
+     recorded clip of its name, and every list was checked by hand against how the word is said. */
+  // Syllables as the word is said (Den Danske Ordbog), one entry per picture. test/brain.mjs checks each against
+  // the word in LEX, and the brain's verify counts the vowels as a second route.
+  var BEATS = [
+    ['🐱', 'kat'], ['🐮', 'ko'], ['🐭', 'mus'], ['🏠', 'hus'], ['🌞', 'sol'], ['🚗', 'bil'], ['🐟', 'fisk'], ['🐴', 'hest'],
+    ['🐷', 'gris'], ['🐐', 'ged'], ['🧀', 'ost'], ['🥚', 'æg'], ['🐸', 'frø'], ['🥄', 'ske'], ['🌳', 'træ'], ['🎩', 'hat'],
+    ['🦈', 'haj'], ['🏰', 'slot'], ['🦅', 'ørn'], ['🐺', 'ulv'], ['🚌', 'bus'],
+    ['🐒', 'a-be'], ['🦉', 'u-gle'], ['🦁', 'lø-ve'], ['🐜', 'my-re'], ['🌙', 'må-ne'], ['👑', 'kro-ne'], ['👃', 'næ-se'],
+    ['🍐', 'pæ-re'], ['🍎', 'æb-le'], ['🥁', 'trom-me'], ['🧸', 'bam-se'], ['🐯', 'ti-ger'], ['🚀', 'ra-ket'], ['🤖', 'ro-bot'],
+    ['🍌', 'ba-nan'], ['🐰', 'ka-nin'], ['🐬', 'del-fin'], ['🔨', 'ham-mer'], ['🐉', 'dra-ge'], ['🐍', 'slan-ge'], ['🍅', 'to-mat'],
+    ['🐧', 'ping-vin'], ['🌋', 'vul-kan'], ['🧲', 'mag-net'], ['🎺', 'trom-pet'], ['🦀', 'krab-be'], ['⭐', 'stjer-ne'], ['🔑', 'nøg-le'],
+    ['👂', 'ø-re'], ['🎈', 'bal-lon'],
+    ['🐘', 'e-le-fant'], ['🍍', 'a-na-nas'], ['☔', 'pa-ra-ply'], ['🌈', 'regn-bu-e'], ['🐨', 'ko-a-la'], ['🦋', 'som-mer-fugl'],
+    ['🥥', 'ko-kos-nød'], ['🍉', 'vand-me-lon'], ['🥕', 'gu-le-rod'], ['🥔', 'kar-tof-fel'], ['🦄', 'en-hjør-ning'], ['👻', 'spø-gel-se'],
+    ['🐙', 'blæk-sprut-te'],
+    ['🐊', 'kro-ko-dil-le'], ['🦜', 'pa-pe-gøj-e']
+  ];
+  // True Danish rhymes by sound, between pictures the game has (kat/hat, and/tand, bog/tog: same vowel, same end).
+  // Two groups never rhyme with each other, so any piece from another group is a safe wrong one.
+  var RHYME_PICS = [['🐱', '🎩'], ['🏠', '🐭'], ['🦆', '🦷'], ['📖', '🚂'], ['🍌', '🌋'], ['🐧', '🐬', '🐰'], ['🧲', '🎺'], ['☔', '☁️']];
+  // Pictures whose name starts with the plain, expected sound of its first letter (no hj-, hv-, c-, no vowel that
+  // sounds like another letter). Only the letters the secret words need are listed; none of them is q, w, x or z.
+  var LETTER_PICS = {
+    A: ['🐒', '🍍', '⚓'], B: ['🚗', '🚌', '🍌', '🧸', '🎈'], D: ['🐬', '🐉', '🚪'], E: ['🐘'], F: ['🐟', '🐸', '🐑'],
+    G: ['🐷', '🐐'], H: ['🏠', '🐶', '🐴', '🎩', '🦈', '🔨'], K: ['🐱', '🐮', '🐰', '👑', '🦀'], L: ['🦁'],
+    M: ['🐭', '🌙', '🐜', '🥛'], N: ['👃', '🔑'], O: ['🧀'], R: ['🚀', '🤖'], S: ['🌞', '🐍', '🥄', '☁️'],
+    T: ['🍅', '🐯', '🥁', '🚂'], U: ['🦉', '🐺'], V: ['🌋'], 'Æ': ['🍎', '🥚'], 'Ø': ['👂', '🦅']
+  };
+  // Secret words: real short words with a picture, spelled only with letters above (never q, w, x or z), and with
+  // no silent letter (so not "and" or "hund").
+  var SECRET = [['🐱', 'kat'], ['🐮', 'ko'], ['🐭', 'mus'], ['🌞', 'sol'], ['🏠', 'hus'], ['🚌', 'bus'], ['🎩', 'hat'],
+    ['🐐', 'ged'], ['🐒', 'abe'], ['🥄', 'ske'], ['🐺', 'ulv'], ['🐴', 'hest'], ['🐸', 'frø'], ['🌳', 'træ'], ['🏰', 'slot'],
+    ['🦅', 'ørn'], ['🥚', 'æg'], ['👃', 'næse']];
+  var PRAISE0 = ['Flot!', 'Ja!', 'Super!'];
+  var T0 = {
+    beatP: { da: 'Klap ordet', en: 'Clap the word' },
+    beatS: { da: 'Klap ordet på trommen.', en: 'Clap the word on the drum.' },
+    beatI: { da: 'Ét slag for hver del af ordet.', en: 'One beat for each part of the word.' },
+    beatH1: { da: 'Sig ordet langsomt, og klap med.', en: 'Say the word slowly and clap along.' },
+    rpP: { da: 'Hvilken brik rimer?', en: 'Which piece rhymes?' },
+    rpI: { da: 'Træk den brik, der rimer, hen til billedet.', en: 'Drag the piece that rhymes to the picture.' },
+    swP: { da: 'Find det hemmelige ord', en: 'Find the secret word' },
+    swI: { da: 'Vælg det første bogstav i hvert billede.', en: 'Pick the first letter of each picture.' },
+    swH1: { da: 'Lyt efter den første lyd.', en: 'Listen for the first sound.' },
+    swH2: { da: 'Her er det hemmelige ord.', en: 'Here is the secret word.' }
+  };
+  function t0(k, L) { return T0[k][L] || T0[k].en; }
+  function picName(e, L) { var w = wordOf(e, L); return w ? cap(w) + '.' : ''; }
+  function vowels(w) { return (String(w).match(/[aeiouyæøå]/g) || []).length; }
+
+  step({
+    id: 'o14', grade: 0, langs: ['da'], name: { da: 'Klap ordet', sv: 'Klappa ordet', no: 'Klapp ordet', en: 'Clap the word' },
+    pick: function (U, L, E) {
+      var n = U.int(1, E ? 2 : 4), list = BEATS.filter(function (b) { return b[1].split('-').length === n; });
+      return { e: U.pick(list)[0] };
+    },
+    key: function (p) { return p.e; },
+    make: function (p, L, U) {
+      var b = BEATS.filter(function (x) { return x[0] === p.e; })[0], w = wordOf(p.e, L);
+      if (L !== 'da' || !b || !w || b[1].replace(/-/g, '') !== w) return null;
+      var parts = b[1].split('-'), n = parts.length, name = picName(p.e, L);
+      return {
+        ui: 'beats', prompt: t0('beatP', L), say: t0('beatS', L) + ' ' + name, intro: t0('beatI', L),
+        visual: null,
+        beats: { emoji: p.e, n: n, max: 6, says: [name] },
+        how: [H(parts.join(' – '), big(parts.join(' – ')), t0('beatH1', L)), H(String(n), { type: 'dots', n: n, emoji: '🥁' }, 'Det er ' + n + '.')],
+        praise: U.pick(PRAISE0),
+        key: { type: 'beats', lang: L }
+      };
+    }
+  });
+
+  step({
+    id: 'o15', grade: 0, langs: ['da'], name: { da: 'Rim-brikker', sv: 'Rimbitar', no: 'Rimbrikker', en: 'Rhyme pieces' },
+    pick: function (U) {
+      var gi = U.int(0, RHYME_PICS.length - 1), pair = U.sample(RHYME_PICS[gi], 2);
+      var others = [];
+      RHYME_PICS.forEach(function (g, i) { if (i !== gi) others = others.concat(g); });
+      return { t: pair[0], r: pair[1], x: U.sample(others, 2) };
+    },
+    key: function (p) { return p.t + '~' + p.r + '~' + p.x.join(''); },
+    make: function (p, L, U) {
+      if (L !== 'da' || !wordOf(p.t, L) || !wordOf(p.r, L) || p.x.some(function (e) { return !wordOf(e, L); })) return null;
+      var ch = U.choice({ emoji: p.r }, p.x.map(function (e) { return { emoji: e }; }), 3);
+      var tn = picName(p.t, L), rn = picName(p.r, L);
+      return {
+        ui: 'match', prompt: t0('rpP', L), say: tn + ' ' + t0('rpP', L), intro: t0('rpI', L),
+        visual: null,
+        match: { target: p.t, pieces: ch.options.map(function (o) { return { emoji: o.emoji, say: picName(o.emoji, L) }; }), correct: ch.correct, says: [tn].concat(ch.options.map(function (o) { return picName(o.emoji, L); })) },
+        how: [H(tx(T.rhymeH0, L), { type: 'emoji', emoji: p.t }), H(tx(T.rhymeH, L, { w: cap(wordOf(p.t, L)), r: wordOf(p.r, L) }), { type: 'seq', items: [p.t, p.r] }, tn + ' ' + rn + ' De ender på samme lyd.')],
+        praise: U.pick(PRAISE0),
+        key: { type: 'rhymepiece', lang: L }
+      };
+    }
+  });
+
+  step({
+    id: 'o16', grade: 0, langs: ['da'], name: { da: 'Hemmeligt ord', sv: 'Hemligt ord', no: 'Hemmelig ord', en: 'Secret word' },
+    pick: function (U) {
+      var s = U.pick(SECRET), ls = letters(s[1]);
+      // one picture per letter, never the secret word's own picture, never the same picture twice
+      var used = [s[0]], pics = [];
+      for (var i = 0; i < ls.length; i++) {
+        var pool = (LETTER_PICS[ls[i]] || []).filter(function (e) { return used.indexOf(e) < 0; });
+        if (!pool.length) return null;
+        var e = U.pick(pool); used.push(e); pics.push(e);
+      }
+      var fill = 'ABDEFGHKLMNORSTUVÆØ'.split('').filter(function (c) { return ls.indexOf(c) < 0; });
+      return { e: s[0], pics: pics, x: U.sample(fill, ls.length <= 2 ? 2 : 3) };
+    },
+    key: function (p) { return p.e + ':' + p.pics.join(''); },
+    make: function (p, L, U) {
+      var w = wordOf(p.e, L);
+      if (L !== 'da' || !w) return null;
+      var ls = letters(w);
+      if (ls.length !== p.pics.length || ls.length < 2 || ls.length > 4) return null;
+      for (var i = 0; i < ls.length; i++) { var pw = wordOf(p.pics[i], L); if (!pw || up(pw.charAt(0)) !== ls[i]) return null; }
+      var names = p.pics.map(function (e) { return picName(e, L); });
+      return {
+        ui: 'secret', prompt: t0('swP', L), say: t0('swP', L) + '. ' + names[0], intro: t0('swI', L),
+        visual: null,
+        secret: { pics: p.pics, word: up(w), target: p.e, tiles: U.shuffle(ls.concat(p.x)), says: names.concat(picName(p.e, L)) },
+        how: [H(t0('swH1', L), { type: 'seq', items: p.pics }), H(ls.join(' ') + ' = ' + cap(w), { type: 'emoji', emoji: p.e }, t0('swH2', L) + ' ' + picName(p.e, L))],
+        praise: U.pick(PRAISE0),
+        key: { type: 'secret', lang: L }
+      };
+    }
+  });
+
+  // The ladder in class order (ids stay as they are: saves store them). Slice 4 put the class 0 pack in among the class 0
+  // steps, easiest first; a save finds its step by id, so nobody moves (and src/brain.js shows a class 0 child the
+  // new games he has passed, see migrate4).
+  var ORDER = ['o14', 'o15', 'o01', 'o16', 'o02', 'o03', 'o04', 'o06', 'o05', 'o07', 'o11', 'o08', 'o12', 'o09', 'o10', 'o13'];
   steps.sort(function (a, b) { return ORDER.indexOf(a.id) - ORDER.indexOf(b.id); });
 
-  var api = { steps: steps, lex: LEX, rhymes: RHYMES, compounds: COMPOUNDS, opposites: { da: OPP.da, sv: OPP.sv, no: OPP.no, en: OPP.en.concat(OPP_HARD_EN) },
-    classes: CLASSES, sentences: SENTENCES, words: words };
+  // shared with src/content/engelsk.js: the spelling task and the English sentences with a gap
+  var kit = { spellTask: spellTask, H: H, big: big, cap: cap, up: up, letters: letters, close: close, spLetters: spLetters, wordOf: wordOf, LI: LI };
+  var api = { steps: steps, lex: LEX, kit: kit, rhymes: RHYMES, compounds: COMPOUNDS, opposites: { da: OPP.da, sv: OPP.sv, no: OPP.no, en: OPP.en.concat(OPP_HARD_EN) },
+    classes: CLASSES, sentences: SENTENCES, words: words,
+    beats: BEATS, rhymePics: RHYME_PICS, letterPics: LETTER_PICS, secret: SECRET, vowels: vowels };
   G.Content.ord = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

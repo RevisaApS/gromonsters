@@ -23,7 +23,7 @@ window.G = window.G || {};
       'b.energy': 'Energi', 'b.charge': 'Kraft', 'b.home': 'Hjem', 'b.holdOn': '{name} klarer den!', 'b.heal': 'Du huskede det! +1 energi', 'b.feelToo': 'Sådan kan man også have det.', 'b.addedDex': 'Nu er den i din Gromodex',
       'b.plusXp': '+1 styrke', 'b.xpTeam': '+{n} styrke til holdet', 'b.level': 'Level {n}', 'b.team': 'Dit hold',
       'b.judge': 'Er det rigtigt?', 'b.superAsk': 'Superslag?', 'b.goodEye': 'Godt set!', 'b.yes': 'Rigtigt', 'b.no': 'Forkert', 'b.showMe': 'Vis mig',
-      'b.life': 'Liv', 'b.kraft': 'Kraft', 'b.superYes': 'Superslag', 'b.superNo': 'Nej tak', 'b.xpGain': '+{n} kraft', 'b.turnOf': '{name}s tur', 'b.thinks': '{name} tænker'
+      'b.tryAgain': 'Prøv igen', 'b.life': 'Liv', 'b.kraft': 'Kraft', 'b.superYes': 'Superslag', 'b.superNo': 'Nej tak', 'b.xpGain': '+{n} kraft', 'b.turnOf': '{name}s tur', 'b.thinks': '{name} tænker', 'b.marks': '{a} af {b} rigtige selv'
     },
     en: {
       'b.appears': 'A wild {name} appears!', 'b.breakShield': 'Break its shield with your powers!', 'b.super': 'Super!', 'b.idk': "I don't know",
@@ -37,7 +37,7 @@ window.G = window.G || {};
       'b.energy': 'Energy', 'b.charge': 'Charge', 'b.home': 'Home', 'b.holdOn': '{name} holds on!', 'b.heal': 'You remembered! +1 energy', 'b.feelToo': 'It can feel that way too.', 'b.addedDex': 'Added to your Gromodex',
       'b.plusXp': '+1 strength', 'b.xpTeam': '+{n} strength for the team', 'b.level': 'Level {n}', 'b.team': 'Your team',
       'b.judge': 'Is it right?', 'b.superAsk': 'Super hit?', 'b.goodEye': 'Good eye!', 'b.yes': 'Right', 'b.no': 'Wrong', 'b.showMe': 'Show me',
-      'b.life': 'Life', 'b.kraft': 'Power', 'b.superYes': 'Super hit', 'b.superNo': 'No thanks', 'b.xpGain': '+{n} power', 'b.turnOf': "{name}'s turn", 'b.thinks': '{name} is thinking'
+      'b.tryAgain': 'Try again', 'b.life': 'Life', 'b.kraft': 'Power', 'b.superYes': 'Super hit', 'b.superNo': 'No thanks', 'b.xpGain': '+{n} power', 'b.turnOf': "{name}'s turn", 'b.thinks': '{name} is thinking', 'b.marks': '{a} of {b} right by himself'
     }
   };
   if (G.i18n && G.i18n.add) G.i18n.add(STR);
@@ -59,7 +59,7 @@ window.G = window.G || {};
   function still() { return document.documentElement.classList.contains('still'); }
   function sfx(n) { try { if (G.audio && G.audio.sfx) G.audio.sfx(n); } catch (e) { /* never let sound break a battle */ } }
   function music(n) { try { if (G.audio && G.audio.music) G.audio.music(n); } catch (e) { /* idem */ } }
-  function say(s) { try { if (s && G.say) G.say(s); } catch (e) { /* voice is optional */ } }
+  function say(s, opt) { try { if (s && G.say) G.say(s, opt); } catch (e) { /* voice is optional */ } }
   function fx(name) {
     var args = Array.prototype.slice.call(arguments, 1);
     try { if (G.fx && G.fx[name]) return G.fx[name].apply(G.fx, args); } catch (e) { console.error('fx.' + name, e); }
@@ -85,6 +85,7 @@ window.G = window.G || {};
     wave: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M20 30V14a4 4 0 018 0v12-16a4 4 0 018 0v16-12a4 4 0 018 0v16-8a4 4 0 018 0v16c0 11-7 18-18 18h-2c-7 0-11-3-15-9l-8-12a4 4 0 016-5z" fill="#ffd9b3" stroke="#0b1430" stroke-width="3.5" stroke-linejoin="round"/><path d="M6 14q-3 6 0 12M12 8q-4 9 0 18" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>',
     book: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5C6.5 3.4 9.4 3.6 12 5.2c2.6-1.6 5.5-1.8 8-.7v14.8c-2.5-1.1-5.4-.9-8 .7-2.6-1.6-5.5-1.8-8-.7z" fill="#ffd34d" stroke="#0b1430" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 5.2v14.8" stroke="#0b1430" stroke-width="1.7"/></svg>',
     up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l7.6 8.2h-4.5v9.4H8.9v-9.4H4.4z" fill="currentColor" stroke="#0b1430" stroke-width="1.9" stroke-linejoin="round"/></svg>',
+    again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.1-5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/><path d="M4 3.5v5h5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12.8l5 5L19.5 6.6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     cross: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>',
     guard: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4l8 3v6.2c0 5-3.3 8.6-8 10-4.7-1.4-8-5-8-10V5.4z" fill="currentColor" stroke="#0b1430" stroke-width="1.7" stroke-linejoin="round"/></svg>',
@@ -122,6 +123,16 @@ window.G = window.G || {};
     if (u === 'fill') return task.fill ? task.fill.need : 1;
     if (u === 'spell') return task.spell ? String(task.spell.word).toUpperCase() : '';
     if (u === 'breathe') return true;
+    // the class 0 pack (slice 4)
+    if (u === 'secret') return task.secret ? String(task.secret.word).toUpperCase() : '';
+    if (u === 'match') return task.match ? task.match.correct : 0;
+    if (u === 'beats') return task.beats ? task.beats.n : 1;
+    if (u === 'give') return task.give ? task.give.n : 1;
+    if (u === 'shapes') { var it = (task.shapes && task.shapes.items) || [], o = []; it.forEach(function (x, k) { if (x.s === task.shapes.want) o.push(k); }); return o; }
+    // Natur og teknik (slice 5)
+    if (u === 'test') return task.test ? task.test.correct : 0;
+    if (u === 'strings') return task.strings ? task.strings.correct : 0;
+    if (u === 'steps') return stepsRow(task.steps);
     if (u === 'build') {
       var b = task.build || {}, tiles = b.tiles || [], n = tiles.length;
       if (b.op === 'product') {
@@ -139,6 +150,14 @@ window.G = window.G || {};
     }
     return null;
   }
+  // a row of arrows that walks him to the berry (src/content/natur.js has the walk): the shortest, or the laid row mended
+  function stepsRow(sg) {
+    var N = G.Content && G.Content.natur;
+    if (!sg || !N) return [];
+    if (!sg.row) return N.shortest(sg) || [];
+    for (var i = 0; i < sg.row.length; i++) for (var d in N.DIRS) { var r = sg.row.slice(); r[i] = d; if (N.walk(sg, r).ok) return r; }
+    return sg.row.slice();
+  }
   function localCheck(task, a) {
     var sol = localSolution(task), ok = false;
     if (task.ui === 'build') {
@@ -147,8 +166,13 @@ window.G = window.G || {};
         if (b.op === 'product') ok = a.length === 2 && tiles[a[0]] && tiles[a[1]] && tiles[a[0]].v * tiles[a[1]].v === b.target;
         else ok = a.length > 0 && a.reduce(function (s, i) { return s + (tiles[i] ? +tiles[i].v : 0); }, 0) === b.target;
       }
-    } else if (task.ui === 'spell') ok = String(a).toUpperCase() === sol;
+    } else if (task.ui === 'spell' || task.ui === 'secret') ok = String(a).toUpperCase() === sol;
+    else if (task.ui === 'shapes') ok = Array.isArray(a) && a.slice().sort(function (x, y) { return x - y; }).join(',') === sol.join(',');
     else if (task.ui === 'breathe') ok = a === true;
+    else if (task.ui === 'steps') {
+      var N = G.Content && G.Content.natur, sg = task.steps;
+      ok = !!N && Array.isArray(a) && a.length > 0 && a.length <= sg.max && N.walk(sg, a).ok && (!sg.row || a.filter(function (d, k) { return d !== sg.row[k]; }).length === 1);
+    }
     else ok = a === sol;
     return { ok: !!ok, smart: false, smartKey: null, solution: sol };
   }
@@ -161,6 +185,29 @@ window.G = window.G || {};
       if (r !== w) return r;
       var extra = (task.spell.tiles || []).map(function (x) { return String(x).toUpperCase(); }).filter(function (L) { return w.indexOf(L) < 0; })[0];
       return extra ? extra + w.slice(1) : undefined;
+    }
+    if (u === 'secret') { var sw = String(task.secret.word).toUpperCase(), sr = sw.split('').reverse().join(''); if (sr !== sw) return sr; var sx = (task.secret.tiles || []).filter(function (L) { return sw.indexOf(L) < 0; })[0]; return sx ? sx + sw.slice(1) : undefined; }
+    if (u === 'match') return task.match.correct === 0 ? 1 : 0;
+    if (u === 'beats') return task.beats.n + 1;
+    if (u === 'give') return task.give.n < task.give.total ? task.give.n + 1 : task.give.n - 1;
+    if (u === 'shapes') { var ws = localSolution(task); return ws.slice(1); }
+    if (u === 'test') return 1 - task.test.correct;
+    if (u === 'strings') return 1 - task.strings.correct;
+    if (u === 'steps') {
+      // the laid row as it is, or a row of one way only that walks off the grid or into a stone
+      var sg = task.steps;
+      var N = G.Content && G.Content.natur;
+      // a laid row: one arrow changed, to a way that still does not reach the berry (the row unchanged is not handed in)
+      if (sg.row) {
+        for (var wi = 0; N && wi < sg.row.length; wi++) for (var wd in N.DIRS) {
+          if (wd === sg.row[wi]) continue;
+          var wrow = sg.row.slice(); wrow[wi] = wd;
+          if (!N.walk(sg, wrow).ok) return wrow;
+        }
+        return undefined;
+      }
+      for (var dk in { u: 1, r: 1, d: 1, l: 1 }) { var wr = []; for (var q2 = 0; q2 < sg.max; q2++) wr.push(dk); if (N && !N.walk(sg, wr).ok) return wr; }
+      return undefined;
     }
     if (u === 'build' && task.build.op !== 'product' && task.build.confirm) {
       // a hidden target is pressed in with "Færdig", so one orb that is not the answer is a real wrong try
@@ -200,6 +247,9 @@ window.G = window.G || {};
     streak: 3         // first-try rights in a row that earn the super hit offer
   };
   function part(n, share) { return Math.max(1, Math.round(n * share)); }
+  // what is left after a hit: a hit always takes off what it shows, in every battle, the first one too (Steve's play
+  // notes 4: the first battle can be lost)
+  function lifeAfter(life, hit) { return Math.max(0, (+life || 0) - Math.max(0, +hit || 0)); }
   function lifeOf(kraft) { return RULES.life0 + RULES.lifeStep * Math.max(1, Math.round(+kraft) || 1); }
   // what the wild one's hit costs
   function wildDamage(wildKraft) { return part(lifeOf(wildKraft), RULES.wildHit); }
@@ -234,6 +284,17 @@ window.G = window.G || {};
     var DEAD = { dead: true };
     function w(ms) { return rawWait(ms).then(function () { if (S.dead) throw DEAD; }); }
     function race(p, ms) { return Promise.race([Promise.resolve(p).catch(function () {}), rawWait(ms)]).then(function () { if (S.dead) throw DEAD; }); }
+
+    // The voice always finishes its line. Before the battle itself brings a new spoken line (a task, a turn, a cheer),
+    // it waits here until the one before has ended, so the screen and the voice stay together. At most `max` ms.
+    function spoken(max) {
+      var v = G.voice;
+      if (!v || !v.idle || !v.on || !v.on()) return Promise.resolve();
+      return v.idle(max == null ? 8000 : max).then(function () { if (S.dead) throw DEAD; });
+    }
+    // two tasks that look the same to him count as one, whatever step they came from
+    function seen(task) { return !!(S.used[task.id] || (task.sig && S.used[task.sig])); }
+    function use(task) { S.used[task.id] = 1; if (task.sig) S.used[task.sig] = 1; }
 
     /* ---- build the stage ---- */
     root.innerHTML = '';
@@ -300,6 +361,10 @@ window.G = window.G || {};
     var side = el('div', 'bt-side', null, body);
     var idk = el('button', 'btn btn-round bt-idk', '<span class="h">?</span>', side);
     idk.type = 'button'; idk.dataset.act = 'idk'; idk.setAttribute('aria-label', t('b.idk'));
+    // while the wild one thinks: the arrow that skips to its answer, where the "?" sits on his own turn
+    var watchNext = el('button', 'btn btn-round bt-watch-next', ICON.next, side);
+    watchNext.type = 'button'; watchNext.dataset.act = 'watch-next'; watchNext.setAttribute('aria-label', t('b.next'));
+    watchNext.addEventListener('click', function () { if (S.phase === 'watch') next(); });
     // the super hit offer: two big buttons in place of a task
     var offer = el('div', 'bt-offer', null, panel);
     var offerYes = el('button', 'btn btn-gold bt-offer-yes', ICON.star + ICON.bolt, offer);
@@ -434,8 +499,8 @@ window.G = window.G || {};
     }
     function takeLife(to, n, blocked) {
       if (blocked || n <= 0) { popNumber(to, ICON.guard, 'is-block'); return; }
-      if (to === W) S.wLife = Math.max(0, S.wLife - n);
-      else me().life = Math.max(mode === 'intro' ? 1 : 0, me().life - n); // the first battle can not be lost
+      if (to === W) S.wLife = lifeAfter(S.wLife, n);
+      else me().life = lifeAfter(me().life, n);
       popNumber(to, '<span class="num">−' + n + '</span>', to === W ? 'is-wild' : 'is-mine');
       hud();
     }
@@ -471,9 +536,10 @@ window.G = window.G || {};
     });
     speak.addEventListener('click', function () {
       sfx('tap');
-      if (S.phase === 'how' && S.howSay) say(S.howSay);
-      else if (S.phase === 'watch' && S.watchSay) say(S.watchSay);
-      else if (S.task) say(S.task.say || S.task.prompt);
+      // his own "hear it again": the one tap that may stop the voice and start the line over
+      if (S.phase === 'how' && S.howSay) say(S.howSay, { cut: true });
+      else if (S.phase === 'watch' && S.watchSay) say(S.watchSay, { cut: true });
+      else if (S.task) say(S.task.say || S.task.prompt, { cut: true });
     });
     howNext.addEventListener('click', next);
     home.addEventListener('click', function () { sfx('tap'); askQuit(); });
@@ -498,7 +564,8 @@ window.G = window.G || {};
         onAnswer: function (a) { input({ kind: 'answer', value: a }); },
         solution: sol == null ? null : sol,
         onBreath: onBreath,
-        ghost: ghost
+        ghost: ghost,
+        fighter: me().id   // the one fighting now walks the arrow grid (after a step-in it is not team[0])
       });
       if (!still()) { taskHost.classList.remove('rise-in'); void taskHost.offsetWidth; taskHost.classList.add('rise-in'); }
       say(task.say || task.prompt);
@@ -511,7 +578,7 @@ window.G = window.G || {};
       return r;
     }
     function solutionFor(task) {
-      var probe = { build: [], fill: -1, choice: -1, spell: '', breathe: false }[task.ui];
+      var probe = { build: [], fill: -1, choice: -1, spell: '', breathe: false, secret: '', match: -1, beats: -1, give: -1, shapes: [], test: -1, strings: -1, steps: [] }[task.ui];
       try { var r = brain && brain.check ? brain.check(task, probe) : null; if (r && r.solution != null) return r.solution; } catch (e) { /* the local route covers it */ }
       return localSolution(task);
     }
@@ -520,15 +587,27 @@ window.G = window.G || {};
       S.records.push(rec);
       try { if (brain && brain.record) brain.record(task, { ok: rec.ok, firstTry: rec.firstTry, helped: rec.helped, today: today }); } catch (e) { console.error('brain.record', e); }
     }
+    // the topics this battle may use: those that are on for this player (the parent page), from the brain
+    function topics() {
+      var all = (G.Brain && G.Brain.POWERS) || ['tal', 'ord', 'logik'];
+      try { if (brain && brain.topics) { var on = brain.topics(); if (on && on.length) return on; } } catch (e) { console.error('brain.topics', e); }
+      return all;
+    }
     function nextTask() {
-      var own = wildC.power, hard = ['tal', 'ord', 'logik'], others = hard.filter(function (p) { return p !== own; });
+      // a wild one that leans to a topic that is off simply draws from the others
+      var hard = topics(), own = wildC.power, others = hard.filter(function (p) { return p !== own; });
+      if (!others.length) others = hard;
       for (var tries = 0; tries < 10; tries++) {
         var p = hard.indexOf(own) < 0 ? pick(hard) : (S.tasks === 0 || Math.random() < 0.6) ? own : pick(others);
         if (tries > 5) p = pick(hard);
         var task = null;
         try { task = brain && brain.next ? brain.next({ power: p, today: today }) : null; } catch (e) { console.error('brain.next', e); }
-        if (task && task.ui && !S.used[task.id]) return task;
+        if (task && task.ui && !seen(task)) return task;
       }
+      // every question of his steps has been asked in this battle (Natur og teknik's float game has five): the step
+      // above in one of his topics, rather than a hit without a question
+      var order = [own].concat(others).filter(function (p) { return hard.indexOf(p) >= 0; });
+      for (var k = 0; k < order.length; k++) { var up = stretchTask(order[k]); if (up) return up; }
       return null;
     }
 
@@ -539,18 +618,18 @@ window.G = window.G || {};
       for (var tries = 0; tries < 8; tries++) {
         var task = null;
         try { task = brain.teach({ today: today }); } catch (e) { console.error('brain.teach', e); }
-        if (task && task.ui && task.ui !== 'breathe' && !S.used[task.id]) return task;
+        if (task && task.ui && task.ui !== 'breathe' && !seen(task)) return task;
       }
       return stretchTask(S.lastPower || wildC.power);
     }
     // one step above his level, same topic: the super hit. It never moves his level.
     function stretchTask(power) {
-      var hard = ['tal', 'ord', 'logik'];
+      var hard = topics();
       if (hard.indexOf(power) < 0) power = pick(hard);
       for (var tries = 0; tries < 8; tries++) {
         var task = null;
         try { task = brain && brain.stretch ? brain.stretch({ power: power }) : brain && brain.next ? brain.next({ power: power, today: today }) : null; } catch (e) { console.error('brain.stretch', e); }
-        if (task && task.ui && task.ui !== 'breathe' && !S.used[task.id]) return task;
+        if (task && task.ui && task.ui !== 'breathe' && !seen(task)) return task;
       }
       return null;
     }
@@ -560,7 +639,7 @@ window.G = window.G || {};
       await entrance();
       while (!S.dead) {
         if (S.wLife <= 0) { await heartMoment(); S.result = mode === 'intro' ? 'caught' : 'won'; S.xp = 1; S.xpBy[me().baseId] = 1; await catchMoment(); break; }
-        if (me().life <= 0 && !(await stepIn())) { S.result = 'slipped'; await slipAway(); break; }
+        if (me().life <= 0 && !(await stepIn())) { S.result = 'slipped'; await faint(); await slipAway(); break; }
         await turn();
         if (!S.dead && S.wLife > 0 && me().life > 0) await wildTurn();
       }
@@ -580,6 +659,7 @@ window.G = window.G || {};
       await w(400);
       sfx('shield');
       await w(mode === 'intro' ? 1900 : 1100);
+      await spoken();
     }
 
     async function turn() {
@@ -590,8 +670,9 @@ window.G = window.G || {};
       if (superTry && !task) superTry = false;
       if (!task) task = nextTask();
       if (!task) { takeLife(W, part(me().lifeMax, RULES.hit)); return; } // never stuck without a task
-      S.task = task; S.used[task.id] = 1; S.tasks++; S.lastPower = task.power;
+      S.task = task; use(task); S.tasks++; S.lastPower = task.power;
       S.solution = solutionFor(task);
+      await spoken();
       setPhase('task');
       openTask(task, null, 'task');
       panel.classList.toggle('is-super', superTry);
@@ -599,10 +680,15 @@ window.G = window.G || {};
       var inp = await waitInput();
       if (S.dead) throw DEAD;
       clearPointer();
+      // he answered before the voice got to the question: it is no longer read out
+      try { if (G.voice && G.voice.unsay) G.voice.unsay(task.say || task.prompt); } catch (e) { /* voice is optional */ }
       var res = inp.kind === 'answer' ? check(task, inp.value) : null;
       if (res && res.ok) {
-        if (superTry) S.records.push({ power: task.power, step: task.step, ok: true, firstTry: false, helped: false, stretch: true, kind: 'super' });
-        else record(task, true, false);
+        if (superTry) {
+          S.records.push({ power: task.power, step: task.step, ok: true, firstTry: false, helped: false, stretch: true, kind: 'super' });
+          // a super hit is a task from the step above: getting it right moves him up to that step
+          try { if (brain && brain.record) brain.record(task, { ok: true, firstTry: true, helped: false, super: true, today: today }); } catch (e) { console.error('brain.record', e); }
+        } else record(task, true, false);
         await rightHit(task, res, inp.value, superTry);
         panel.classList.remove('is-super');
         return;
@@ -623,6 +709,7 @@ window.G = window.G || {};
     }
 
     async function superOffer() {
+      await spoken();
       setPhase('offer');
       if (S.ui) { S.ui.destroy(); S.ui = null; }
       taskHost.innerHTML = '';
@@ -646,7 +733,8 @@ window.G = window.G || {};
       if (!superTry) { S.firstTry++; S.streak++; }
       S.sparks += 3 + (smart ? 2 : 0);
       var praise = res.praise || task.praise;
-      if (praise && !superTry) { line(praise, 2600, 'is-praise'); say(praise); }
+      // praise is shown; it is spoken only when the voice is free (he may have answered while the task was still being read)
+      if (praise && !superTry) { line(praise, 2600, 'is-praise'); say(praise, { skip: true }); }
       if (big) showBanner(t('b.super'), 'is-gold');
       await comet(task, value);
       await strikeAnim(P, W, { big: big, damage: part(me().lifeMax, RULES.hit) * (superTry ? RULES.superHit : 1), quick: true });
@@ -696,6 +784,7 @@ window.G = window.G || {};
       var from = Math.max(0, opt.from | 0), to = opt.to == null ? all.length : Math.min(all.length, opt.to);
       var steps = all.slice(from, to);
       if (!steps.length) return;
+      await spoken();
       setPhase('how');
       panel.classList.add('is-how');
       how.classList.toggle('is-wild', wild);
@@ -722,7 +811,7 @@ window.G = window.G || {};
         var sv = st.visual && st.visual.type ? st.visual : null;
         if (sv && sv.type === 'big' && String(sv.text).trim() === String(st.text || '').trim()) sv = null; // say it once, not twice
         how.classList.toggle('has-vis', !!sv);
-        if (sv) G.TaskUI.visual(howVis, sv);
+        if (sv) G.TaskUI.visual(howVis, sv, { fighter: wild ? wildC.id : me().id });
         howVis.classList.remove('is-anim'); void howVis.offsetWidth; howVis.classList.add('is-anim');
         howText.textContent = st.text || '';
         how.classList.remove('is-step'); void how.offsetWidth; how.classList.add('is-step');
@@ -749,7 +838,8 @@ window.G = window.G || {};
       var whole = txt('div', 'bt-sw num', word.charAt(0) + word.slice(1).toLowerCase(), howText);
       how.classList.remove('is-step'); void how.offsetWidth; how.classList.add('is-step');
       // capital letters, one sentence each ("S. O. L. Sol."): the recorded voice has a clip per letter and per word
-      var lineSay = letters.join('. ') + '. ' + word.charAt(0) + word.slice(1).toLowerCase() + '.';
+      // an English word is said by the English voice: "[en] Cat." (src/voice.js), never by the Danish one
+      var lineSay = letters.join('. ') + '. ' + (lang === 'en' ? '[en] ' : '') + word.charAt(0) + word.slice(1).toLowerCase() + '.';
       var shown = -1;
       function light(i) {
         if (i <= shown || S.dead) return;
@@ -759,8 +849,11 @@ window.G = window.G || {};
         if (i >= cells.length) { whole.classList.add('is-on'); call(P.m, 'hop'); }
       }
       // the voice tells us when each sentence starts; without a recorded voice a steady beat does the same job
+      // the voice finishes the line before (it is never cut), so the letters wait for it: then this line starts at once,
+      // and only this line's sentences light the letters
+      await spoken();
       var heard = false;
-      if (G.voice) G.voice.onSentence = function (i) { heard = true; light(i); };
+      if (G.voice) G.voice.onSentence = function (i, s, said) { if (said !== lineSay) return; heard = true; light(i); };
       S.howSay = lineSay;
       say(lineSay);
       await w(500);
@@ -776,6 +869,7 @@ window.G = window.G || {};
 
     async function helped(task, sol) {
       var tries = 0;
+      await spoken();
       setPhase('help');
       openTask(task, sol, 'help');
       var auto = false;
@@ -813,11 +907,12 @@ window.G = window.G || {};
       var over = false;
       var tap = new Promise(function (res) { S.nextWaiter = res; });
       var timed = (async function () {
-        var at = 0;
+        var at = 0, v = G.voice, talks = !!(v && v.idle && v.on && v.on());
         while (!over && !S.dead) {
           await rawWait(150); at += 150;
-          var v = G.voice && G.voice.last, clip = !!v && v.path === 'clips';
-          if (at >= minMs && (clip ? (v.ended || at >= 9000) : at >= estMs)) break;
+          // with the voice on: until it has said the line (never less than minMs, never more than 12 s);
+          // with the voice off: the time it takes to read the line
+          if (talks ? (at >= minMs && (!v.busy || at >= 12000)) : at >= estMs) break;
         }
         if (!over && !S.dead) await rawWait(250);
       })();
@@ -827,6 +922,7 @@ window.G = window.G || {};
     function mark(side, ok) { popNumber(side, ok ? ICON.check : ICON.cross, 'is-mark ' + (ok ? 'is-yes' : 'is-no')); }
     async function wildTurn() {
       setPhase('busy');
+      await spoken();
       var task = teachTask();
       if (S.ui) { S.ui.destroy(); S.ui = null; }
       taskHost.innerHTML = '';
@@ -841,21 +937,20 @@ window.G = window.G || {};
       call(W.m, 'hop');
       await w(250); // the banner stays up while its task appears and is read out: no waiting for it
       if (!task) { await w(500); await wildStrike(); R.classList.remove('is-wildturn'); return; }
-      S.used[task.id] = 1;
+      use(task);
       var sol = solutionFor(task);
       S.task = task; S.solution = sol; S.watch = { teach: task.teach || null };
       // its task, in the same picture he knows, locked: nothing here is his to tap but the arrow
       promptEl.textContent = task.prompt || ''; promptEl.className = 'bt-prompt h' + ((task.prompt || '').length > 34 ? ' is-long' : '');
-      S.ui = G.TaskUI.render(taskHost, task, { onAnswer: function () {}, solution: null });
+      S.ui = G.TaskUI.render(taskHost, task, { onAnswer: function () {}, solution: null, fighter: wildC.id });
       S.ui.lock(); S.ui.el.classList.add('is-theirs');
       S.robotSent = false;
       setPhase('watch');
       W.wrap.classList.add('is-thinking');
+      // the question is on screen and is not read out again (Steve's play notes 4); his own hear-again tap still reads it
       S.watchSay = task.say || task.prompt;
-      say(S.watchSay);
-      await nextOrSpoken(1200, sayMs(S.watchSay));
-      // how it thinks, one step at a time, then the answer
-      await showHow(task, { wild: true });
+      // how it thinks, one small step at a time, on the task itself; the old how is the fallback
+      if (!(await thinkTurn(task, sol))) await showHow(task, { wild: true });
       setPhase('busy');
       promptEl.textContent = task.prompt || ''; promptEl.className = 'bt-prompt h' + ((task.prompt || '').length > 34 ? ' is-long' : '');
       W.wrap.classList.remove('is-thinking');
@@ -865,20 +960,108 @@ window.G = window.G || {};
       call(W.m, 'hop');
       await w(750);
       await wildStrike();
-      S.records.push({ power: task.power, step: task.step, ok: true, firstTry: false, helped: false, stretch: true, kind: 'watch', teach: task.teach || null });
+      S.records.push({ power: task.power, step: task.step, ok: true, firstTry: false, helped: false, stretch: true, kind: 'watch', teach: task.teach || null,
+        firstWatch: S.lastThink ? S.lastThink.first : null, thinkMs: S.lastThink ? S.lastThink.ms : null, beats: S.lastThink ? S.lastThink.beats : null, skipped: S.lastThink ? S.lastThink.skipped : null });
+      S.lastThink = null;
       R.classList.remove('is-wildturn');
       S.watch = null; S.watchSay = null;
     }
+    /* The wild one thinks on its own task, step by step (src/think.js has the steps of every kind of task). Slow the
+       first time he watches a step of the ladder: every step spoken, a pause after each. After he has watched it once:
+       only the steps that carry the idea are spoken, with short pauses. "Watched" is kept per step in his save
+       (o.watched). The arrow skips to its answer; a line being spoken is never cut (the next one waits its turn). */
+    var watched = o.watched && typeof o.watched === 'object' ? o.watched : {};
+    function estMs(text) { return Math.min(6000, 350 + 68 * String(text || '').replace(/\[en\]\s*/g, '').length); }
+    // a Danish game speaks only steps that have a recorded clip (the rest are shown); an English game uses the device voice
+    function hasClip(text) { var v = G.voice; return G.lang !== 'da' || !v || !v.ready || !v.has || v.has(text); }
+    function nowMs() { return window.performance && performance.now ? performance.now() : Date.now(); }
+    // waits for the spoken line to end (never less than pc.min), then the pause; a tap on the arrow skips ahead
+    async function beatWait(text, pc) {
+      var v = G.voice, talks = !!(text && v && v.on && v.on() && v.idle), at = 0, est = text ? Math.max(pc.min, estMs(text)) : pc.min, tap = false;
+      S.nextWaiter = function () { tap = true; S.thinkSkip = true; };
+      while (!tap && !S.dead) {
+        await rawWait(50); at += 50;
+        if (talks ? (at >= pc.min && (!v.busy || at >= 12000)) : at >= est) break;
+      }
+      for (var q = 0; !tap && !S.dead && q < pc.pause; q += 50) await rawWait(50);
+      S.nextWaiter = null;
+      if (S.dead) throw DEAD;
+    }
+    function thinkEls(list) {
+      var out = [], root = S.ui && S.ui.el;
+      (list || []).forEach(function (a) {
+        var sel = typeof a === 'string' ? a : a.sel, i = typeof a === 'string' ? 0 : a.i;
+        var all = root ? root.querySelectorAll(sel) : [];
+        if (!all.length) all = R.querySelectorAll(sel);
+        if (all[i]) out.push(all[i]);
+      });
+      return out;
+    }
+    async function thinkTurn(task, sol) {
+      var plan = G.Think && G.Think.plan ? G.Think.plan(task, sol) : null, beats = plan ? plan.beats : [];
+      if (!beats.length || !S.ui || !S.ui.el) return false;
+      var stepId = task.step || task.id, first = !(watched[stepId] > 0), pace = G.Think.PACE[first ? 'first' : 'later'];
+      var root = S.ui.el, vbox = root.querySelector('.tk-vis'), kept = null, lit = [], spokenN = 0;
+      S.thinkSkip = false;
+      R.classList.add('is-thinkturn');
+      root.classList.add('is-thinking');
+      var t0 = nowMs();
+      function restoreVis() {
+        if (!vbox || !kept) return;
+        vbox.innerHTML = ''; kept.forEach(function (n) { vbox.appendChild(n); }); kept = null;
+        vbox.classList.remove('is-thinkvis');
+      }
+      try {
+        for (var i = 0; i < beats.length; i++) {
+          var b = beats[i];
+          if (S.thinkSkip && i < beats.length - 1) continue;   // the arrow: straight to its answer
+          lit.forEach(function (e) { e.classList.remove('is-think'); });
+          // a picture of its how, drawn where the question's picture is (the question's own comes back after)
+          if (b.vis && vbox) {
+            if (!kept) kept = Array.prototype.slice.call(vbox.childNodes);
+            vbox.innerHTML = '';
+            vbox.classList.add('is-thinkvis');
+            var sv = b.vis.type === 'big' && String(b.vis.text).trim() === String(b.text || '').trim() ? null : b.vis;
+            if (sv) G.TaskUI.visual(vbox, sv, { fighter: wildC.id });
+            if (b.text) txt('div', 'tk-thinktext', b.text, vbox);
+          } else restoreVis();
+          // the part of the answer first (a berry on the plate, a letter in its box), then what it looks at lights up
+          if (b.show !== undefined) { try { S.ui.show(b.show); } catch (e) { console.error('think show', e); } }
+          // the secret word's chest opens on its last step (the whole word), not with the last letter
+          if (task.ui === 'secret' && i < beats.length - 1) root.querySelectorAll('.sw-chest.is-open').forEach(function (e) { e.classList.remove('is-open'); });
+          lit = thinkEls(b.light);
+          lit.forEach(function (e) { e.classList.remove('is-think'); void e.getBoundingClientRect(); e.classList.add('is-think'); });
+          if (b.pluck != null) { var str = root.querySelector('[data-act="string-' + b.pluck + '"]'); if (str) str.click(); }
+          var speak = b.say && (first || b.key) && hasClip(b.say) ? b.say : null;
+          if (speak) { say(speak); spokenN++; }
+          else if (b.pace === 'count') sfx('pick');
+          if (b.pace !== 'count' || i === beats.length - 1) call(W.m, 'hop');
+          await beatWait(speak, pace[b.pace] || pace.step);
+        }
+      } finally {
+        lit.forEach(function (e) { e.classList.remove('is-think'); });
+        restoreVis();
+        root.classList.remove('is-thinking');
+        R.classList.remove('is-thinkturn');
+      }
+      var ms = Math.round(nowMs() - t0);
+      S.lastThink = { first: first, ms: ms, beats: beats.length, spoken: spokenN, skipped: !!S.thinkSkip, step: stepId };
+      watched[stepId] = (watched[stepId] | 0) + 1;
+      try { if (o.onWatched) o.onWatched(stepId); } catch (e) { console.error('onWatched', e); }
+      return true;
+    }
     async function wildStrike() {
       await strikeAnim(W, P, { hitSfx: 'wildhit', damage: wildDamage(wildKraft) });
-      if (mode === 'intro' && me().life <= 1) {
-        // the first fight can not be lost: the starter braces and holds on
-        P.wrap.classList.remove('is-brace'); void P.wrap.offsetWidth; P.wrap.classList.add('is-brace');
-        setTimeout(function () { P.wrap.classList.remove('is-brace'); }, 900);
-        await w(900);
-        return;
-      }
       await w(450);
+    }
+    // his last Gromonster is out of life: it faints where it stands (no one is left to step in)
+    async function faint() {
+      me().out = true;
+      setPhase('busy');
+      P.wrap.classList.add('is-faint');
+      call(P.m, 'sleep');
+      sfx('slip');
+      await w(1100);
     }
     // the fighter is out of life: the next one on the team steps in with a full bar of its own
     async function stepIn() {
@@ -918,10 +1101,12 @@ window.G = window.G || {};
       W.wrap.classList.add('is-dizzy');
       music('heart');
       await w(700);
+      await spoken();
       var calmLine = t('b.calm', { name: wildC.name });
       line(calmLine, 3200, 'is-heart is-big');
       say(calmLine);
       await w(mode === 'intro' ? 3000 : 2200);
+      await spoken();
       var task = null;
       try { task = brain && brain.heart ? brain.heart({ today: today, name: wildC.name }) : null; } catch (e) { console.error('brain.heart', e); }
       if (!task || !task.ui) { W.wrap.classList.remove('is-dizzy'); return; }
@@ -949,6 +1134,7 @@ window.G = window.G || {};
         promptEl.textContent = why; promptEl.className = 'bt-prompt h is-why' + (why.length > 34 ? ' is-long' : '');
         say(why);
         await w(2600);
+        await spoken();
       }
       S.heartWhy = null;
       record(task, firstOk, !firstOk);
@@ -1000,6 +1186,7 @@ window.G = window.G || {};
         showCatchName(cheer, '');
         say(cheer);
         await w(2600);
+        await spoken();
         return;
       }
       W.wrap.classList.add('is-center');
@@ -1020,6 +1207,7 @@ window.G = window.G || {};
       showCatchName(wildC.name, friend.replace(wildC.name, '').trim());
       say(friend);
       await w(2900);
+      await spoken();
     }
     function showCatchName(big, small) {
       catchName.innerHTML = '';
@@ -1038,14 +1226,15 @@ window.G = window.G || {};
       bubble.querySelector('span').textContent = t('b.bye');
       await w(800);
       call(W.m, 'hop');
-      // it stays on the map, so he can try again whenever he likes
-      var s = mode === 'train' ? t('b.slipTrain', { name: wildC.name }) + ' ' + t('b.keep') : t('b.keep');
-      line(s, 4200, 'is-big');
-      say(s);
+      // it stays on the map, so he can try again whenever he likes. In the first battle a new player has nothing to
+      // keep yet, and the wild one waits for the try again on the card
+      var s = mode === 'train' ? t('b.slipTrain', { name: wildC.name }) + ' ' + t('b.keep') : mode === 'intro' ? '' : t('b.keep');
+      if (s) { line(s, 4200, 'is-big'); say(s); }
       await w(1600);
       hideBubble();
-      if (mode !== 'train') W.wrap.classList.add('is-leave');
+      if (mode !== 'train' && mode !== 'intro') W.wrap.classList.add('is-leave');
       await w(1300);
+      await spoken();
     }
 
     async function collectCard() {
@@ -1088,12 +1277,32 @@ window.G = window.G || {};
       img.onerror = function () { img.remove(); pic.classList.add('bt-blob'); };
       img.src = BASE + 'assets/creatures/' + wildC.id + '.webp';
       txt('div', 'bt-card-name h', wildC.name, card);
-      var stats = el('div', 'bt-stats', null, card);
-      var s3 = el('div', 'bt-stat bt-stat-stars', null, stats);
-      var starRow = el('div', 'bt-starrow', null, s3);
-      var shown = Math.max(S.firstTry, Math.min(S.tasks, 9));
-      for (var i = 0; i < Math.max(1, shown); i++) el('span', 'bt-star' + (i < S.firstTry ? ' is-on' : ''), ICON.star, starRow).style.setProperty('--d', (300 + i * 120) + 'ms');
-      txt('span', 'bt-stat-l', t('b.stars'), s3);
+      // Today's friend (Steve's play notes 4): one new friend a day. After a win in the wild, the same mark as on the map
+      // and at camp sits in the card's corner. Today's friend still open: the ring glows gold with this one's face in it
+      // (it can be picked at camp). Already chosen: today's friend's face and a moon (a new one tomorrow), and this one
+      // waves goodbye, faded, so nothing on the card looks like a catch. The first battle's Crabbi is today's friend.
+      var todayMark = null;
+      if (G.todayMark && ((res === 'won' && mode === 'catch') || res === 'caught')) {
+        var taken = res === 'caught' ? wildC.id : o.friendToday || null;
+        todayMark = G.todayMark(el('div', 'bt-today'), taken ? { state: 'filled', id: taken } : { state: 'ready', id: wildC.id });
+        card.appendChild(todayMark);
+        if (res === 'won' && taken) {
+          pic.classList.add('is-away', 'is-bye');
+          el('span', 'bt-bye', ICON.wave, pic);
+        }
+      }
+      // his own tasks in the order he met them: a green tick for one he got right by himself, a soft question mark for
+      // one where his Gromonster showed him how. No words and no score to work out (Steve, 2026-11-15: the stars and
+      // "Rigtigt i første forsøg" made no sense).
+      var mine = S.records.filter(function (r) { return r.kind !== 'watch' && r.power !== 'hjerte'; }).slice(-12);
+      if (mine.length) {
+        var marks = el('div', 'bt-marks', null, card), rights = mine.filter(function (r) { return r.ok && !r.helped; }).length;
+        marks.setAttribute('aria-label', t('b.marks', { a: rights, b: mine.length }));
+        mine.forEach(function (r, i) {
+          var good = r.ok && !r.helped;
+          el('span', 'bt-mark ' + (good ? 'is-yes' : 'is-help') + (r.kind === 'super' && good ? ' is-super' : ''), good ? ICON.check : '<b class="h">?</b>', marks).style.setProperty('--d', (300 + i * 110) + 'ms');
+        });
+      }
       if (S.xp > 0) {
         // what the team earned, with the same count CORE adds to every member
         var xr = el('div', 'bt-xprow', null, card), faces = el('div', 'bt-xpfaces', null, xr);
@@ -1105,14 +1314,26 @@ window.G = window.G || {};
         el('span', 'bt-xpico', ICON.up, xr);
         txt('span', 'bt-xptext h', t('b.xpGain', { n: S.xp }), xr);
       }
-      var go = el('button', 'btn btn-gold btn-big bt-done', null, card);
-      go.type = 'button'; go.dataset.act = 'battle-done';
-      txt('span', null, t('b.toCamp'), go);
-      go.addEventListener('click', next);
+      // a lost battle has a clear way to try again. The first battle has no camp yet: trying again is the only way on.
+      var lost = res === 'slipped', again = false, row = el('div', 'bt-card-btns', null, card);
+      if (!lost || mode !== 'intro') {
+        var go = el('button', 'btn btn-gold btn-big bt-done', null, row);
+        go.type = 'button'; go.dataset.act = 'battle-done';
+        txt('span', null, t('b.toCamp'), go);
+        go.addEventListener('click', next);
+      }
+      if (lost) {
+        var re = el('button', 'btn ' + (mode === 'intro' ? 'btn-gold btn-big bt-done' : 'btn-green') + ' bt-again', ICON.again, row);
+        re.type = 'button'; re.dataset.act = mode === 'intro' ? 'battle-done' : 'battle-again';
+        txt('span', null, t('b.tryAgain'), re);
+        re.addEventListener('click', function () { if (!S.nextWaiter) return; again = true; next(); });
+      }
       over.classList.add('is-on');
       sfx(res === 'slipped' ? 'step' : 'win');
       await waitNext();
-      finish(res);
+      // the first battle's card has only "try again", so its one button (and a robot's next) always means that
+      if (lost && mode === 'intro') again = true;
+      finish(res, again);
     }
 
     /* ---- quitting, kindly ---- */
@@ -1162,11 +1383,11 @@ window.G = window.G || {};
       if (S.ui) { try { S.ui.destroy(); } catch (e) { /* gone */ } S.ui = null; }
       S.waiter = null; S.nextWaiter = null;
     }
-    function finish(result) {
+    function finish(result, again) {
       if (S.done) return;
       S.done = true; S.dead = true; S.phase = 'done'; S.result = result;
       cleanup();
-      var out = { result: result, wildId: wildC.id, sparks: S.sparks, heart: S.heart, records: S.records.slice(), xpBy: Object.assign({}, S.xpBy) };
+      var out = { result: result, wildId: wildC.id, sparks: S.sparks, heart: S.heart, records: S.records.slice(), xpBy: Object.assign({}, S.xpBy), again: !!again };
       try { if (o.onDone) o.onDone(out); } catch (e) { console.error('Battle onDone', e); }
     }
     function destroy() {
@@ -1180,13 +1401,15 @@ window.G = window.G || {};
       state: function () {
         return {
           phase: S.phase, busy: S.busy, life: me().life, lifeMax: me().lifeMax, wildLife: S.wLife, wildLifeMax: S.wLifeMax, kraft: me().kraft, wildKraft: wildKraft,
-          fighter: me().id, fighterIndex: S.fi, streak: S.streak, watch: S.watch ? { teach: S.watch.teach } : null,
+          fighter: me().id, fighterIndex: S.fi, streak: S.streak, watch: S.watch ? { teach: S.watch.teach, say: S.watchSay, step: S.task && S.task.step } : null,
           // kept for older robots: shield and energy now mean the two life bars
           shield: S.wLife, shieldMax: S.wLifeMax, energy: me().life, energyMax: me().lifeMax, charge: S.streak,
           taskUi: S.phase === 'watch' ? 'watch' : S.phase === 'offer' ? 'offer' : S.task && S.ui && (S.phase === 'task' || S.phase === 'help' || S.phase === 'heart' || S.phase === 'fix') ? S.task.ui : null,
           taskId: S.task ? S.task.id : null, power: S.task ? S.task.power : null, mode: mode,
           sparks: S.sparks, firstTry: S.firstTry, xp: S.xp, xpBy: Object.assign({}, S.xpBy), tasks: S.tasks, heart: S.heart, result: S.result, done: S.done,
           canStrike: false, waitingNext: !!S.nextWaiter, quitOpen: S.quitOpen,
+          // a guess-then-test or an arrow walk is playing (Natur og teknik): his answer is in, it is handed in after
+          testing: !!(S.ui && S.ui.el && S.ui.el.classList.contains('is-testing')),
           task: S.task ? JSON.parse(JSON.stringify(S.task)) : null // read-only copy, so a test can work out where a finger should go
         };
       },
@@ -1221,7 +1444,7 @@ window.G = window.G || {};
   var idleRobot = { phase: 'none', done: true };
   G.Battle = {
     start: start,
-    RULES: RULES, wildDamage: wildDamage, lifeOf: lifeOf,
+    RULES: RULES, wildDamage: wildDamage, lifeOf: lifeOf, lifeAfter: lifeAfter,
     stop: function () { if (cur) cur.destroy(); },
     robot: {
       state: function () { return cur ? cur.robot.state() : idleRobot; },

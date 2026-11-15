@@ -50,6 +50,11 @@ window.G = window.G || {};
       var bar = G.el('div', 'team-bar team-num panel', '<span class="tb-ico">' + G.icon('bolt') + '</span><b class="num">' + tk + '</b>');
       bar.setAttribute('aria-label', G.t('map.team') + ' ' + tk);
       root.appendChild(bar);
+      // today's friend: the same mark as at camp, in the same place (play notes 4)
+      var today = G.el('div', 'today-slot map-today');
+      today.setAttribute('aria-hidden', 'true');
+      G.todayMark(today, G.todayState());
+      root.appendChild(today);
 
       // camp
       var cp = spot(G.CAMP_SPOT.x, G.CAMP_SPOT.y);

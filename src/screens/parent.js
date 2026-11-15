@@ -29,6 +29,12 @@ window.G = window.G || {};
     }
   });
   G.i18n.add({
+    da: { 'pa.rateS': '{n} % rigtigt første gang', 'pa.provenS': '{n} trin holdt', 'pa.fixedS': '{n} fejl rettet', 'pa.waitingS': '{n} fejl øves igen',
+      'pa.lastOn': 'Mindst ét emne skal være til.' },
+    en: { 'pa.rateS': '{n} % right first time', 'pa.provenS': '{n} steps held', 'pa.fixedS': '{n} misses fixed', 'pa.waitingS': '{n} misses coming back',
+      'pa.lastOn': 'At least one topic stays on.' }
+  });
+  G.i18n.add({
     da: { 'pa.players': 'Spillere', 'pa.del': 'Slet spiller', 'pa.delQ': 'Slet {name}? Hele spillet for denne spiller forsvinder.', 'pa.delYes': 'Ja, slet', 'pa.delNo': 'Nej',
       'pa.aiVoice': 'Den danske stemme er lavet med AI.', 'pa.playing': 'Spiller nu' },
     en: { 'pa.players': 'Players', 'pa.del': 'Delete player', 'pa.delQ': 'Delete {name}? Everything in this game will be gone.', 'pa.delYes': 'Yes, delete', 'pa.delNo': 'No',
@@ -91,50 +97,113 @@ window.G = window.G || {};
   function volumes() { try { if (G.audio && G.audio.setVolume) G.audio.setVolume({ music: G.settings.music, sfx: G.settings.sfx }); } catch (e) { console.error(e); } }
 
   // ---------- tabs ----------
-  function learnTab(body) {
-    var sum = null;
-    try { sum = G.brain && G.brain.summary ? G.brain.summary() : null; } catch (e) { console.error(e); }
-    var cards = G.el('div', 'pa-cards');
-    if (!sum) cards.appendChild(G.el('div', 'pa-empty', G.t('pa.noBrain')));
-    else {
-      ['tal', 'ord', 'logik'].forEach(function (pw) {
-        var s = sum[pw] || {}, P = G.powers[pw];
-        var c = G.el('div', 'pa-card pow-' + pw);
-        c.appendChild(G.el('div', 'pa-pow', '<span class="pa-ico">' + P.icon + '</span>' + G.tx(P.name)));
-        var count = s.stepCount || 1, idx = s.stepIndex | 0;
-        var lad = G.el('div', 'ladder');
-        for (var i = 0; i < count; i++) lad.appendChild(G.el('i', i < idx ? 'past' : i === idx ? 'now' : ''));
-        c.appendChild(lad);
-        c.appendChild(G.el('div', 'pa-step', G.t('pa.step', { x: idx + 1, y: count })));
-        if (s.stepName) c.appendChild(G.el('div', 'pa-stepname', s.stepName));
-        if (s.grade != null) c.appendChild(G.el('div', 'pa-grade chip', G.t('pa.belongs', { grade: G.gradeLabel(s.grade).full })));
-        var stats = G.el('div', 'pa-stats');
-        function stat(label, val, soft) { stats.appendChild(G.el('div', 'pa-stat', '<span>' + label + '</span><b class="num' + (soft ? ' soft' : '') + '">' + val + '</b>')); }
-        var enough = (s.answered | 0) >= 8; // a rate on a handful of answers says nothing yet
-        stat(G.t('pa.rate'), enough ? Math.round((s.firstTryRate || 0) * 100) + ' %' : G.t('pa.few'), !enough);
-        stat(G.t('pa.proven'), s.provenSteps | 0);
-        stat(G.t('pa.fixed'), s.comebacksFixed | 0);
-        stat(G.t('pa.waiting'), s.comebacksWaiting | 0);
-        c.appendChild(stats);
-        cards.appendChild(c);
+  // The learn tab (slice 3): one row per topic with its switch, its starting class and where he is now; below, an
+  // example task of the class last tapped, the heart moments and the play time.
+  var ex = null;   // the example on show: {pw, g, n}
+  function learnTab(body, rerender) {
+    var sum = null, list = null;
+    try { sum = G.brain && G.brain.summary ? G.brain.summary() : null; list = G.brain && G.brain.topicList ? G.brain.topicList() : null; } catch (e) { console.error(e); }
+    if (!sum || !list) { body.appendChild(G.el('div', 'pa-empty', G.t('pa.noBrain'))); return; }
+    var p = G.profile;
+    if (!ex || !list.some(function (x) { return x.id === ex.pw; })) ex = { pw: list[0].id, g: list[0].grade, n: 0 };
+    var rows = G.el('div', 'pa-topics n' + list.length);
+    var onCount = list.filter(function (x) { return x.on; }).length;
+    list.forEach(function (tp) {
+      var pw = tp.id, s = sum[pw] || {}, P = G.powers[pw];
+      var r = G.el('div', 'pa-trow pow-' + pw + (tp.on ? '' : ' is-off') + (ex.pw === pw ? ' is-shown' : ''));
+      r.appendChild(G.el('div', 'pa-tname', '<span class="pa-ico">' + P.icon + '</span><b>' + G.tx(P.name) + '</b>'));
+      // on or off. The last topic that is on can not be switched off.
+      var sw = G.el('div', 'seg pa-switch');
+      [[true, 'pa.on'], [false, 'pa.off']].forEach(function (o) {
+        var last = !o[0] && tp.on && onCount <= 1;
+        var b = G.el('button', 'seg-btn' + (o[0] === tp.on ? ' on' : '') + (last ? ' is-locked' : ''), G.t(o[1]));
+        b.type = 'button'; b.dataset.act = 'topic-' + (o[0] ? 'on' : 'off') + '-' + pw;
+        if (last) b.setAttribute('aria-label', G.t('pa.lastOn'));
+        G.tap(b, function () {
+          if (o[0] === tp.on) return;
+          var ok = false;
+          try { ok = G.brain.setTopic(pw, o[0]); } catch (e) { console.error(e); }
+          if (!ok) { r.classList.remove('nope'); void r.offsetWidth; r.classList.add('nope'); note.textContent = G.t('pa.lastOn'); return; }
+          G.save(); rerender();
+        });
+        sw.appendChild(b);
       });
-      var h = sum.hjerte || { moments: 0, topics: {} }, P = G.powers.hjerte;
-      var hc = G.el('div', 'pa-card pow-hjerte');
-      hc.appendChild(G.el('div', 'pa-pow', '<span class="pa-ico">' + P.icon + '</span>' + G.tx(P.name)));
-      hc.appendChild(G.el('div', 'pa-big num', String(h.moments | 0)));
-      hc.appendChild(G.el('div', 'pa-step', G.t('pa.moments')));
-      var ts = G.el('div', 'pa-stats pa-hstats');
-      ['feel', 'help', 'breathe', 'grit', 'team'].forEach(function (k) { ts.appendChild(G.el('div', 'pa-stat', '<span>' + G.t('pa.t.' + k) + '</span><b class="num">' + ((h.topics && h.topics[k]) | 0) + '</b>')); });
-      hc.appendChild(ts);
-      cards.appendChild(hc);
+      r.appendChild(sw);
+      // the starting class: the same six buttons as in new-player setup. A new class places the topic again from it.
+      var chips = G.el('div', 'lv-chips pa-chips');
+      for (var g = 0; g <= 5; g++) (function (g) {
+        var lb = G.gradeLabel(g);
+        var c = G.el('button', 'lv-chip num' + (g === tp.grade ? ' on' : ''), lb.big + '<small>.</small>');
+        c.type = 'button'; c.dataset.act = 'start-' + pw + '-' + g; c.setAttribute('aria-label', G.tx(P.name) + ': ' + lb.full);
+        G.tap(c, function () {
+          ex = { pw: pw, g: g, n: g === tp.grade && ex.pw === pw && ex.g === g ? ex.n + 1 : 0 };
+          if (g !== tp.grade) {
+            p.levels = Object.assign({}, p.levels || {}); p.levels[pw] = g;
+            G.save(); G.createBrain(); G.save();
+          }
+          rerender();
+        }, 'pick');
+        chips.appendChild(c);
+      })(g);
+      r.appendChild(chips);
+      // where he is now
+      var count = s.stepCount || 1, idx = s.stepIndex | 0, now = G.el('div', 'pa-now');
+      var lad = G.el('div', 'ladder');
+      for (var i = 0; i < count; i++) lad.appendChild(G.el('i', i < idx ? 'past' : i === idx ? 'now' : ''));
+      now.appendChild(lad);
+      var l1 = G.el('div', 'pa-nowstep');
+      l1.textContent = G.t('pa.step', { x: idx + 1, y: count }) + (s.grade != null ? ' · ' + G.gradeLabel(s.grade).full : '') + (s.stepName ? ' · ' + s.stepName : '');
+      now.appendChild(l1);
+      var enough = (s.answered | 0) >= 8; // a rate on a handful of answers says nothing yet
+      var l2 = G.el('div', 'pa-nowstats');
+      l2.textContent = [enough ? G.t('pa.rateS', { n: Math.round((s.firstTryRate || 0) * 100) }) : G.t('pa.few'),
+        G.t('pa.provenS', { n: s.provenSteps | 0 }), G.t('pa.fixedS', { n: s.comebacksFixed | 0 }), G.t('pa.waitingS', { n: s.comebacksWaiting | 0 })].join(' · ');
+      now.appendChild(l2);
+      r.appendChild(now);
+      rows.appendChild(r);
+    });
+    body.appendChild(rows);
+    var note = G.el('div', 'pa-note'); rows.appendChild(note);
+
+    var low = G.el('div', 'pa-low');
+    // an example task of the class last tapped, as in new-player setup
+    var box = G.el('div', 'pa-ex panel pow-' + ex.pw), e = null;
+    try { e = G.Brain.create(null, { grade: ex.g, lang: G.lang }).example(ex.pw, ex.g, ex.n); } catch (er) { console.error(er); }
+    if (e && e.task) {
+      var head = G.el('div', 'lv-ex-head');
+      head.appendChild(G.el('span', 'lv-ico', G.powers[ex.pw].icon));
+      var nm = G.el('b', 'lv-ex-name'); nm.textContent = G.gradeLabel(ex.g).full + ': ' + (e.name || G.tx(G.powers[ex.pw].name)); head.appendChild(nm);
+      if (e.kinds > 1) { var cnt = G.el('span', 'lv-ex-count num'); cnt.textContent = (e.at + 1) + ' / ' + e.kinds; head.appendChild(cnt); }
+      // a listening task's word is only in what the voice says: the grown-up can hear the example too
+      var hear = G.el('button', 'btn btn-round lv-hear', G.icon('speaker')); hear.type = 'button'; hear.dataset.act = 'example-say';
+      hear.setAttribute('aria-label', G.t('b.again') !== 'b.again' ? G.t('b.again') : 'Hør');
+      (function (task) { G.tap(hear, function () { G.say(task.say || task.prompt, { cut: true }); }); })(e.task);
+      head.appendChild(hear);
+      var more = G.el('button', 'btn lv-more', G.t('setup.other')); more.type = 'button'; more.dataset.act = 'example-other';
+      G.tap(more, function () { ex.n++; rerender(); });
+      head.appendChild(more);
+      box.appendChild(head);
+      var q = G.el('div', 'lv-ex-q h'); q.textContent = e.task.prompt || ''; box.appendChild(q);
+      var tb = G.el('div', 'lv-ex-task'), host = G.el('div', 'bt-task'); tb.appendChild(host); box.appendChild(tb);
+      try { var ui = G.TaskUI.render(host, e.task, { onAnswer: function () {}, solution: null }); ui.lock(); } catch (er2) { console.error(er2); }
     }
-    body.appendChild(cards);
-    var p = G.profile, d = G.today(), week = 0;
+    low.appendChild(box);
+    var side = G.el('div', 'pa-side');
+    var h = sum.hjerte || { moments: 0, topics: {} }, HP = G.powers.hjerte;
+    var hc = G.el('div', 'pa-heart pow-hjerte');
+    hc.appendChild(G.el('div', 'pa-hhead', '<span class="pa-ico">' + HP.icon + '</span><b>' + G.t('pa.moments') + '</b><b class="num">' + (h.moments | 0) + '</b>'));
+    var ts = G.el('div', 'pa-hlist');
+    ['feel', 'help', 'breathe', 'grit', 'team'].forEach(function (k) { ts.appendChild(G.el('span', '', G.t('pa.t.' + k) + ' <b class="num">' + ((h.topics && h.topics[k]) | 0) + '</b>')); });
+    hc.appendChild(ts);
+    side.appendChild(hc);
+    var d = G.today(), week = 0;
     for (var k = 0; k < 7; k++) week += G.minutesOn(d - k);
     var strip = G.el('div', 'pa-strip');
     [[G.t('pa.today'), G.t('pa.min', { n: G.minutesOn(d) })], [G.t('pa.week'), G.t('pa.min', { n: week })], [G.t('pa.battles'), p.stats.battles | 0], [G.t('map.team'), G.teamKraft(p)]]
       .forEach(function (x) { strip.appendChild(G.el('div', 'pa-fact', '<span>' + x[0] + '</span><b class="num">' + x[1] + '</b>')); });
-    body.appendChild(strip);
+    side.appendChild(strip);
+    low.appendChild(side);
+    body.appendChild(low);
   }
 
   function settingsTab(body, rerender) {
@@ -269,7 +338,7 @@ window.G = window.G || {};
     if (!manage) head.appendChild(tabs);
     pg.appendChild(head);
     var body = G.el('div', 'pa-body'); pg.appendChild(body);
-    if (tab === 'learn') learnTab(body);
+    if (tab === 'learn') learnTab(body, function () { page(root, 'learn'); });
     else if (tab === 'settings') settingsTab(body, function () { page(root, 'settings'); });
     else if (tab === 'players') playersTab(root, body, function () { page(root, 'players'); });
     else testTab(body);

@@ -5,26 +5,64 @@
   var W = typeof window !== 'undefined' ? window : globalThis;
   var G = W.G = W.G || {};
   if (typeof module !== 'undefined' && typeof require === 'function') {
-    ['tal', 'ord', 'logik', 'hjerte'].forEach(function (p) {
+    ['tal', 'ord', 'engelsk', 'logik', 'natur', 'hjerte'].forEach(function (p) {
       if (!(G.Content && G.Content[p])) { try { require('./content/' + p + '.js'); } catch (e) { /* loaded by the page instead */ } }
     });
   }
 
   var LANGS = ['da', 'sv', 'no', 'en'];
-  var HARD = ['tal', 'ord', 'logik'];
+  // The topics, in the order every screen shows them. This is the one list: the battle, setup, the parent page, the
+  // tests and the voice tools all read it (G.Brain.POWERS). A topic may exist only in some game languages (TOPIC_LANGS),
+  // and a step may too (step.langs): English is a topic of its own in a Danish game, while an English game keeps its
+  // own Ord steps (opposites, longer words, sound-alike words) under the same ids as before.
+  // Natur og teknik (slice 5) is, like Engelsk, a topic of the Danish game only.
+  var HARD = ['tal', 'ord', 'logik', 'engelsk', 'natur'];
+  var TOPIC_LANGS = { engelsk: ['da'], natur: ['da'] };
+  var OLDER_LAST = { natur: 1 };   // topics whose older children start on the last step (startIndex)
   var PLACE = 12;         // placement answers per power (placement also ends when the child reaches his own class)
-  var EASY = 3;           // the first times a step is met, its numbers come from the easy half of its range
+  var EASY = 2;           // the first times a step is met, its numbers come from the easy half of its range
+  var INTRO = 2;          // a task's rule sentence (task.intro) is spoken only the first times its step is met
+  var SURE = 0.85;        // share of his last ten answers in a topic right on the first try that counts as "he has proved himself"
+  var HOT = 8;            // this many first-try rights in a row in a topic: he is under his level, so the next step up is two steps
   var PV = 2;             // placement version: saves made before the gentle start are placed again while still early
   var RECENT = 12;        // ids kept to avoid repeats
   var REVIEW = 0.2;       // share of tasks from an earlier step
   var TEACH_WEIGHT = 6;   // the wild one's task: a topic he misses half the time comes up about twice as often as one he misses a tenth of the time
   var TEACH_MISSED = 0.4; // ... and this share of its tasks is a step he missed lately, when there is one; the rest is the step above his own
   var TOPICS = ['feel', 'help', 'breathe', 'grit', 'team'];
-  var VISUALS = ['big', 'emoji', 'dots', 'clock', 'frac', 'seq', 'grid', 'balance', 'machine', 'line', 'scene'];
-  var UIS = ['build', 'fill', 'choice', 'spell', 'breathe'];
+  // lab: a still picture of a Natur og teknik game (slice 5), for its how: the tub, the ramps, the strings or the grid
+  var VISUALS = ['big', 'emoji', 'dots', 'clock', 'frac', 'seq', 'grid', 'balance', 'machine', 'line', 'scene', 'tally', 'hear', 'shapes', 'lab'];
+  // secret, match, beats, give and shapes are the class 0 pack (slice 4): picked letters, a dragged piece, drum beats,
+  // berries on a plate and tapped shapes
+  // test, strings and steps are Natur og teknik (slice 5): guess then test, two strings to pluck, arrow steps on a grid
+  var UIS = ['build', 'fill', 'choice', 'spell', 'breathe', 'secret', 'match', 'beats', 'give', 'shapes', 'test', 'strings', 'steps'];
+  var PACK4 = { tal: ['t36', 't37', 't38'], ord: ['o14', 'o15', 'o16'] };   // the class 0 pack's steps, for migrate4
+  // the class 0 games a new class 0 player visits early (introVisits), in the order he visits them: the slice 4 pack,
+  // and Natur og teknik's arrow steps before the legs (the wild one's own turn tends to show the legs, the step above n01)
+  var MEET0 = { tal: PACK4.tal, ord: PACK4.ord, natur: ['n06', 'n04'] };
 
   function content() { return G.Content || {}; }
-  function ladder(power) { var c = content()[power]; return c && c.steps ? c.steps : []; }
+  function fullLadder(power) { var c = content()[power]; return c && c.steps ? c.steps : []; }
+  function forLang(o, L) { return !o || !o.langs || o.langs.indexOf(L) >= 0; }
+  // the steps of a topic in a game language (a topic that does not exist in that language has none)
+  function ladder(power, L) {
+    if (TOPIC_LANGS[power] && TOPIC_LANGS[power].indexOf(L) < 0) return [];
+    return fullLadder(power).filter(function (s) { return forLang(s, L); });
+  }
+  // the topics that exist in a game language
+  function topicsFor(L) { return HARD.filter(function (p) { return ladder(p, L).length > 0; }); }
+  // A step id's place in the ladder of a language. A step that is not in it (a step moved to another topic, or one that
+  // belongs to the other language) lands on the last step of the ladder that comes before it in the full ladder.
+  function resolve(power, sid, L) {
+    var steps = ladder(power, L), full = fullLadder(power);
+    if (!steps.length) return -1;   // the topic does not exist in this language: its step waits as it is
+    for (var i = 0; i < steps.length; i++) if (steps[i].id === sid) return i;
+    var at = full.map(function (s) { return s.id; }).indexOf(sid);
+    if (at < 0) return -1;
+    var best = 0;
+    for (var k = 0; k < steps.length; k++) if (full.indexOf(steps[k]) < at) best = k;
+    return best;
+  }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
 
@@ -130,7 +168,7 @@
   /* Start and placement (SPEC-2.md section 7).
      Start: the first step of the class two school years under the child's (class 0 and 1: the very first step).
      Placement runs for the first PLACE answers in a power. While the child is right on the first try, every answer
-     jumps `j` steps up below his own class (sized so a strong child reaches it in about 6 answers) and one step up
+     jumps `j` steps up below his own class (sized so a strong child reaches it in about 4 answers) and one step up
      from there, as far as the end of the class above his own. The first miss steps down one and slows the climb:
      from then on it takes two first-try rights in a row to go one step up. Then the steady rule (4 of the last 5
      right) aims at about 80% first-try success. */
@@ -138,42 +176,99 @@
     for (var i = 0; i < steps.length; i++) if (steps[i].grade >= g) return i;
     return steps.length - 1;
   }
-  function startIndex(power, grade) {
-    var steps = ladder(power);
+  function startIndex(power, grade, L) {
+    var steps = ladder(power, L);
     if (!steps.length || grade <= 1) return 0;
+    // Natur og teknik stops at class 2 for now (slice-5.md): an older child lands on its last step
+    if (OLDER_LAST[power] && grade > steps[steps.length - 1].grade) return steps.length - 1;
     var g = grade - 2, i = firstOfGrade(steps, g);
     while (i > 0 && steps[i].grade > g) i--;   // never start above class - 2, even if that class has no steps
     return i;
   }
-  function targetIndex(power, grade) { var steps = ladder(power); return steps.length ? firstOfGrade(steps, grade) : 0; }
+  function targetIndex(power, grade, L) { var steps = ladder(power, L); return steps.length ? firstOfGrade(steps, grade) : 0; }
   // the highest step placement may reach: the last step of the class above his own
-  function ceilingIndex(power, grade) {
-    var steps = ladder(power), i = steps.length - 1;
+  function ceilingIndex(power, grade, L) {
+    var steps = ladder(power, L), i = steps.length - 1;
     while (i > 0 && steps[i].grade > grade + 1) i--;
     return Math.max(0, i);
   }
-  function jumpFor(power, grade) { return Math.max(1, Math.ceil((targetIndex(power, grade) - startIndex(power, grade)) / 6)); }
+  function jumpFor(power, grade, L) { return Math.max(1, Math.ceil((targetIndex(power, grade, L) - startIndex(power, grade, L)) / 4)); }
   // The ladders as they were before step ids were saved (build 16ba584 / 9e22735): plain id order.
   function ids(ch, n) { var o = []; for (var i = 1; i <= n; i++) o.push(ch + (i < 10 ? '0' : '') + i); return o; }
   var LEGACY = { tal: ids('t', 33), ord: ids('o', 13), logik: ids('l', 14) };
-  function sidOf(power, si) { var s = ladder(power)[si]; return s ? s.id : null; }
-  function freshPower(power, grade) {
-    var si = startIndex(power, grade);
-    return { si: si, sid: sidOf(power, si), pl: 0, run: 0, j: jumpFor(power, grade), m: 0, h: {}, d: {}, pr: [], a: 0, ft: [], fx: 0, c: {} };
+  function sidOf(power, si, L) { var s = ladder(power, L)[si]; return s ? s.id : null; }
+  function freshPower(power, grade, L) {
+    var si = startIndex(power, grade, L);
+    return { si: si, sid: sidOf(power, si, L), pl: 0, run: 0, j: jumpFor(power, grade, L), m: 0, h: {}, d: {}, pr: [], a: 0, ft: [], fx: 0, c: {} };
   }
-  function replace(P, power, grade) {
-    P.si = startIndex(power, grade); P.sid = sidOf(power, P.si);
-    P.pl = 0; P.run = 0; P.m = 0; P.j = jumpFor(power, grade);
+  function replace(P, power, grade, L) {
+    P.si = startIndex(power, grade, L); P.sid = sidOf(power, P.si, L);
+    P.pl = 0; P.run = 0; P.m = 0; P.j = jumpFor(power, grade, L);
   }
   // the class a power is placed from: the parent's own pick for that topic (st.pg), or the child's class
   function gradeOf(st, power) { return st.pg && st.pg[power] != null ? st.pg[power] : st.grade; }
   function fresh(opts) {
     var grade = clamp(opts.grade | 0, 0, 5);
     var seed = opts.seed != null ? opts.seed : (Date.now() ^ Math.floor(Math.random() * 1e9));
-    var st = { v: 1, pv: PV, rng: seed >>> 0, n: 0, grade: grade, lang: opts.lang || 'da', p: {}, cb: [], rc: [], hj: { m: 0, t: {}, rc: [] } };
-    HARD.forEach(function (p) { st.p[p] = freshPower(p, grade); });
+    var lang = LANGS.indexOf(opts.lang) >= 0 ? opts.lang : 'da';
+    var st = { v: 1, pv: PV, s4: 1, rng: seed >>> 0, n: 0, grade: grade, lang: lang, p: {}, off: [], cb: [], rc: [], hj: { m: 0, t: {}, rc: [] } };
+    HARD.forEach(function (p) { st.p[p] = freshPower(p, grade, lang); });
     TOPICS.forEach(function (t) { st.hj.t[t] = 0; });
+    // A new class 0 player meets each game of the class 0 pack early (slice 4, pass mark point 1): one visit to each
+    // pack step above his start, spread over his first battles. A visit does not move his level; a step he has
+    // already reached by then is not visited again (dueComeback).
+    if (grade === 0) Object.keys(MEET0).forEach(function (p) { meetEarly(st, p, lang); });
     return st;
+  }
+  // a class 0 player's early visits to the class 0 games of a topic that sit above his start
+  function meetEarly(st, p, lang) {
+    var steps = ladder(p, lang), si = st.p[p] ? st.p[p].si : 0;
+    if (!MEET0[p] || !steps.length) return;
+    var ids = steps.map(function (s) { return s.id; });
+    introVisits(st, p, MEET0[p].filter(function (id) { return ids.indexOf(id) > si; }), 2, 5);
+  }
+  // one-off visits to steps: comebacks marked intro, served by dueComeback without moving his level
+  // (intro 1: a visit ahead, for a new player; intro 2: a visit back, for an old save's games below his step)
+  function introVisits(st, p, ids, first, gap, back) {
+    st.cb = st.cb || [];
+    ids.forEach(function (id, k) { st.cb.push({ p: p, s: id, k: null, id: '', kind: 'sib', at: (st.n || 0) + first + gap * k, intro: back ? 2 : 1 }); });
+  }
+
+  // What a question looks like to the child, whatever step it came from: its kind, its instruction, its picture and
+  // its right answer. Two tasks with the same signature are the same question.
+  function sigOf(t) {
+    var a = '';
+    if (t.ui === 'spell' && t.spell) a = t.spell.word;
+    else if (t.ui === 'build' && t.build) a = t.build.op + t.build.target + ':' + t.build.tiles.map(function (x) { return x.v; }).sort(function (x, y) { return x - y; }).join(',');
+    else if (t.ui === 'fill' && t.fill) a = t.fill.need + '/' + t.fill.total;
+    else if (t.ui === 'choice' && t.choice) { var o = t.choice.options[t.choice.correct] || {}; a = o.label != null && o.label !== '' ? o.label : o.emoji || JSON.stringify(o.visual || null); }
+    else if (t.ui === 'secret' && t.secret) a = t.secret.word;
+    else if (t.ui === 'match' && t.match) a = t.match.target + '>' + ((t.match.pieces[t.match.correct] || {}).emoji || '');
+    else if (t.ui === 'beats' && t.beats) a = t.beats.emoji + t.beats.n;
+    else if (t.ui === 'give' && t.give) a = String(t.give.n);
+    // the shapes on show are the question (their places, sizes, turns and colours), and the kind to find
+    else if (t.ui === 'shapes' && t.shapes) a = t.shapes.want + ':' + t.shapes.items.map(function (x) { return x.s.charAt(0) + x.z + ',' + x.r + ',' + x.c; }).join(';');
+    // Natur og teknik: the thing or the two ramps, the two strings and what is asked, the grid (and a row laid already)
+    else if (t.ui === 'test' && t.test) a = t.test.scene + ':' + (t.test.scene === 'float' ? t.test.thing : t.test.angles.join('-') + ':' + t.test.ball);
+    else if (t.ui === 'strings' && t.strings) a = t.strings.lens.join('-') + ':' + t.strings.ask;
+    else if (t.ui === 'steps' && t.steps) { var sg = t.steps; a = sg.w + 'x' + sg.h + ':' + sg.start.join(',') + '>' + sg.goal.join(',') + ':' + sg.stones.map(function (x) { return x.join(','); }).join(';') + ':' + (sg.row ? sg.row.join('') : ''); }
+    return t.ui + '|' + (t.ui === 'spell' ? '' : t.prompt) + '|' + JSON.stringify(t.visual || null) + '|' + a;
+  }
+
+  // Slice 4 put six class 0 steps in among the class 0 steps of Tal and Ord. A save finds its step by id, so nobody
+  // moves: a child past class 0 is not sent back, and what he has proven stays proven. A child still in class 0 has
+  // the new games that now sit below his step waiting for him as one-off visits (comebacks marked intro, served by
+  // dueComeback like any other, without moving his level and without counting as a miss fixed); the ones above his
+  // step he meets on his way up.
+  function migrate4(st) {
+    Object.keys(PACK4).forEach(function (p) {
+      var P = st.p[p], steps = ladder(p, st.lang);
+      if (!P || !steps.length || !P.a) return;
+      var cur = steps[P.si];
+      if (!cur || cur.grade !== 0) return;
+      introVisits(st, p, steps.filter(function (s, i) { return i < P.si && PACK4[p].indexOf(s.id) >= 0 && !(P.c && P.c[s.id]); }).map(function (s) { return s.id; }), 1, 2, true);
+    });
+    st.s4 = 1;
   }
 
   function create(saved, opts) {
@@ -181,14 +276,24 @@
     var st;
     if (saved && saved.v === 1 && saved.p) {
       st = clone(saved);
+      if (opts.lang) st.lang = opts.lang;
+      if (LANGS.indexOf(st.lang) < 0) st.lang = 'da';
+      if (!Array.isArray(st.off)) st.off = [];
       HARD.forEach(function (p) {
         var P = st.p[p];
-        if (!P) { st.p[p] = freshPower(p, gradeOf(st, p)); return; }
+        // a topic the save has never had (English, slice 3): placed from the child's class, or the grown-up's pick
+        if (!P) {
+          st.p[p] = freshPower(p, gradeOf(st, p), st.lang);
+          // a class 0 child meets its class 0 games early, as a new player does (Natur og teknik, slice 5)
+          if (gradeOf(st, p) === 0) meetEarly(st, p, st.lang);
+          return;
+        }
         // the ladder may have been reordered since the save: find the step by its id. A save from before step ids
-        // were stored holds only an index into the old ladder: read it there first.
+        // were stored holds only an index into the old ladder: read it there first. A step that has moved to another
+        // topic lands on the last step before it (resolve).
         var sid = P.sid || (st.pv !== PV && LEGACY[p] ? LEGACY[p][clamp(P.si | 0, 0, LEGACY[p].length - 1)] : null);
-        if (sid) { var at = ladder(p).map(function (s) { return s.id; }).indexOf(sid); if (at >= 0) P.si = at; }
-        if (P.j == null) P.j = jumpFor(p, gradeOf(st, p));
+        if (sid) { var at = resolve(p, sid, st.lang); if (at >= 0) P.si = at; P.sid = P.sid || sid; }
+        if (P.j == null) P.j = jumpFor(p, gradeOf(st, p), st.lang);
         if (P.m == null) P.m = 0;
         if (!P.c) P.c = {};
       });
@@ -197,42 +302,71 @@
         // Its old comebacks wait until the new placement is done, so the gentle start comes first.
         HARD.forEach(function (p) {
           if (st.p[p].pl >= 8) return;
-          replace(st.p[p], p, gradeOf(st, p));
+          replace(st.p[p], p, gradeOf(st, p), st.lang);
           (st.cb || []).forEach(function (c) { if (c.p === p) c.old = 1; });
         });
         st.pv = PV;
       }
-      if (opts.lang) st.lang = opts.lang;
       // A parent changed the class: place again from the new grade, keep the history.
       if (opts.grade != null && (opts.grade | 0) !== st.grade) {
         st.grade = clamp(opts.grade | 0, 0, 5);
         st.pg = {};
-        HARD.forEach(function (p) { replace(st.p[p], p, st.grade); });
+        HARD.forEach(function (p) { replace(st.p[p], p, st.grade, st.lang); });
       }
       if (opts.seed != null) st.rng = opts.seed >>> 0;
     } else {
       st = fresh(opts);
     }
-    // A grown-up picked a starting level for a topic (setup): place that topic from it.
+    // A grown-up picked a starting level for a topic (setup or the parent page): place that topic from it.
     if (opts.levels && typeof opts.levels === 'object') HARD.forEach(function (p) {
       if (opts.levels[p] == null) return;
       var want = clamp(opts.levels[p] | 0, 0, 5);
       if (gradeOf(st, p) === want) return;
       st.pg = st.pg || {}; st.pg[p] = want;
-      replace(st.p[p], p, want);
+      replace(st.p[p], p, want, st.lang);
     });
-    if (LANGS.indexOf(st.lang) < 0) st.lang = 'da';
-    HARD.forEach(function (p) { var P = st.p[p], n = ladder(p).length; if (n) { P.si = clamp(P.si, 0, n - 1); P.sid = sidOf(p, P.si); } });
+    // Topics a grown-up switched off (the parent page). Only topics of this game can be off.
+    if (Array.isArray(opts.off)) st.off = opts.off.filter(function (p) { return HARD.indexOf(p) >= 0; });
+    function settle() {
+      HARD.forEach(function (p) {
+        var P = st.p[p], n = ladder(p, st.lang).length;
+        if (!n) return;
+        // a topic made while it did not exist in the game language (Engelsk in an English game) holds no step yet:
+        // now that it exists, place it from its class (the grown-up's pick or the child's), as a new topic is placed
+        if (!P.sid && !P.a) { st.p[p] = freshPower(p, gradeOf(st, p), st.lang); if (gradeOf(st, p) === 0) meetEarly(st, p, st.lang); return; }
+        P.si = clamp(P.si, 0, n - 1); P.sid = sidOf(p, P.si, st.lang);
+      });
+      // The switches always show what a battle uses: when every topic of this language is off (a change of game
+      // language can do that), they all count as on, and the saved switches say so too.
+      var all = topicsFor(st.lang);
+      if (all.length && all.every(function (p) { return st.off.indexOf(p) >= 0; })) st.off = st.off.filter(function (p) { return all.indexOf(p) < 0; });
+    }
+    settle();
+    if (saved && saved.v === 1 && saved.p && !st.s4) migrate4(st);
+    // the topics a battle may use: those of this game language that are on. At least one is always on: when every
+    // topic of the language is off (a switch of game language can do that), all of them count as on.
+    function active() {
+      var all = topicsFor(st.lang), on = all.filter(function (p) { return st.off.indexOf(p) < 0; });
+      return on.length ? on : all;
+    }
+    function lad(p) { return ladder(p, st.lang); }
 
     var rng = new Rng(st.rng);
     var U = makeU(rng);
 
     function stepById(power, id) {
-      var steps = ladder(power);
+      var steps = lad(power);
       for (var i = 0; i < steps.length; i++) if (steps[i].id === id) return { step: steps[i], index: i };
       return null;
     }
-    function remember(id) { st.rc.push(id); if (st.rc.length > RECENT) st.rc.splice(0, st.rc.length - RECENT); }
+    // the last tasks he met, by id and by what the question looks like (two steps can ask the same thing, like spelling
+    // "pære"), so neither comes again soon
+    function remember(t) {
+      st.rc.push(t.id); if (st.rc.length > RECENT) st.rc.splice(0, st.rc.length - RECENT);
+      st.rs = st.rs || [];
+      if (t.sig) { st.rs.push(t.sig); if (st.rs.length > RECENT) st.rs.splice(0, st.rs.length - RECENT); }
+    }
+    function recent(t) { return st.rc.indexOf(t.id) >= 0 || (st.rs || []).indexOf(t.sig) >= 0; }
 
     // Builds a full Task from a step and its params; null when the params do not fit the language.
     function build(power, step, params) {
@@ -246,6 +380,8 @@
       if (raw.smartPraise) t.smartPraise = raw.smartPraise;
       t.key = raw.key || null;
       t.k = params;
+      if (raw.intro) t.intro = raw.intro;
+      t.sig = sigOf(t);
       return t;
     }
     // Easy is a choice of params only: the id comes from the params, so the same content keeps the same id.
@@ -258,7 +394,7 @@
         var t = params ? build(power, step, params) : null;
         if (!t) continue;
         last = t;
-        if (t.id !== avoidId && st.rc.indexOf(t.id) < 0) return t;
+        if (t.id !== avoidId && !recent(t)) return t;
       }
       return last;
     }
@@ -269,13 +405,22 @@
         if (c.old && st.p[power].pl < PLACE) continue;   // a comeback from an old save waits for the new placement
         var due = c.kind === 'sib' ? st.n >= c.at : today >= c.day;
         if (!due) continue;
+        // a visit ahead waits until he has met his own step of the topic once: his own game first (slice 5)
+        if (c.intro === 1) { var own = lad(power)[st.p[power].si]; if (own && !((st.p[power].c || {})[own.id] > 0)) continue; }
         var found = stepById(power, c.s);
-        if (!found) { st.cb.splice(i, 1); i--; continue; }
+        // a visit to a step he has met already is not needed, nor a visit ahead (intro 1) to a step he has reached
+        if (!found || (c.intro && ((st.p[power].c || {})[c.s] || 0) > 0) || (c.intro === 1 && found.index <= st.p[power].si)) { st.cb.splice(i, 1); i--; continue; }
         var t = c.kind === 'sib' ? fresh1(power, found.step, c.id, isEasy(power, found.step)) : build(power, found.step, c.k);
         if (!t) { st.cb.splice(i, 1); i--; continue; }
-        if (st.rc.indexOf(t.id) >= 0) continue;    // shown too recently: wait
+        if (recent(t)) continue;    // shown too recently: wait
         st.cb.splice(i, 1);
-        t.cb = c.kind;
+        if (!c.intro) t.cb = c.kind;
+        else {
+          // a visit to a new game (introVisits) is not a comeback of a miss; it is his first meeting with it, so the
+          // rule is said and the meeting is counted
+          if (t.intro && ((st.p[power].c || {})[c.s] || 0) < INTRO) t.say = t.intro + ' ' + t.say;
+          met(power, found.step);
+        }
         return t;
       }
       return null;
@@ -291,19 +436,46 @@
     function missedSteps(power) {
       var P = st.p[power], out = [];
       function add(id) { if (id && out.indexOf(id) < 0 && stepById(power, id)) out.push(id); }
-      for (var i = st.cb.length - 1; i >= 0; i--) if (st.cb[i].p === power) add(st.cb[i].s);
+      for (var i = st.cb.length - 1; i >= 0; i--) if (st.cb[i].p === power && !st.cb[i].intro) add(st.cb[i].s);
       Object.keys(P.h || {}).forEach(function (id) { if ((P.h[id] || []).indexOf(0) >= 0) add(id); });
       return out;
     }
 
     var brain = {
-      setLang: function (lang) { if (LANGS.indexOf(lang) >= 0) st.lang = lang; },
+      // a new game language: every topic finds its step again in that language's ladder (by its id)
+      setLang: function (lang) {
+        if (LANGS.indexOf(lang) < 0 || lang === st.lang) return;
+        st.lang = lang;
+        HARD.forEach(function (p) { var P = st.p[p]; if (P && P.sid) { var at = resolve(p, P.sid, lang); if (at >= 0) P.si = at; } });
+        settle();
+      },
+      // The topics a battle may use now: those of this game language that are on (at least one).
+      topics: function () { return active(); },
+      // Every topic of this game language, with whether it is on and the class it is placed from (the parent page).
+      topicList: function () {
+        var on = active();
+        return topicsFor(st.lang).map(function (p) { return { id: p, on: on.indexOf(p) >= 0, grade: gradeOf(st, p) }; });
+      },
+      // A grown-up switches a topic on or off. The last topic that is on can not be switched off: returns false then.
+      setTopic: function (power, on) {
+        if (topicsFor(st.lang).indexOf(power) < 0) return false;
+        var off = st.off.filter(function (p) { return p !== power; });
+        if (!on) {
+          var left = topicsFor(st.lang).filter(function (p) { return p !== power && off.indexOf(p) < 0; });
+          if (!left.length) return false;
+          off.push(power);
+        }
+        st.off = off;
+        return true;
+      },
       next: function (o) {
         o = o || {};
         var power = o.power, today = o.today != null ? o.today : 0;
         if (power === 'hjerte') return brain.heart({ today: today });
-        if (HARD.indexOf(power) < 0) power = 'tal';
-        var steps = ladder(power);
+        // a topic that is off, or one this game does not have, gives way to one that is on
+        var on = active();
+        if (on.indexOf(power) < 0) power = on.indexOf('tal') >= 0 && HARD.indexOf(power) < 0 ? 'tal' : U.pick(on);
+        var steps = lad(power);
         if (!steps.length) throw new Error('Brain: no content for ' + power);
         var P = st.p[power];
         st.n++;
@@ -312,9 +484,11 @@
           var si = P.si;
           if (P.pl >= PLACE && si > 0 && U.chance(REVIEW)) si = U.int(Math.max(0, si - 5), si - 1);
           t = fresh1(power, steps[si], null, isEasy(power, steps[si]));
+          // the rule of a kind of task is said the first times he meets it, then only the short question
+          if (t.intro && ((P.c || {})[steps[si].id] || 0) < INTRO) t.say = t.intro + ' ' + t.say;
           met(power, steps[si]);
         }
-        remember(t.id);
+        remember(t);
         st.rng = rng.s;
         return t;
       },
@@ -322,11 +496,11 @@
       // super hit. It counts nothing: no placement, no step movement, no comeback.
       stretch: function (o) {
         o = o || {};
-        var power = HARD.indexOf(o.power) < 0 ? 'tal' : o.power, steps = ladder(power);
+        var on = active(), power = on.indexOf(o.power) >= 0 ? o.power : U.pick(on), steps = lad(power);
         if (!steps.length) return null;
         var si = Math.min(steps.length - 1, st.p[power].si + 1);
         var t = fresh1(power, steps[si], null, true);
-        if (t) { t.stretch = true; remember(t.id); }
+        if (t) { t.stretch = true; remember(t); }
         st.rng = rng.s;
         return t;
       },
@@ -336,23 +510,29 @@
       // It counts nothing: no placement, no step movement, no comeback.
       teach: function (o) {
         o = o || {};
-        var powers = HARD.filter(function (p) { return ladder(p).length > 0; });
+        var powers = active();
         if (!powers.length) return null;
         var weights = powers.map(function (p) { return 1 + TEACH_WEIGHT * missRate(p); });
         var roll = U.r() * weights.reduce(function (a, b) { return a + b; }, 0), power = powers[powers.length - 1];
         for (var i = 0; i < powers.length; i++) { roll -= weights[i]; if (roll < 0) { power = powers[i]; break; } }
-        var steps = ladder(power), missed = missedSteps(power), step, why;
+        var steps = lad(power), missed = missedSteps(power), step, why;
         if (missed.length && U.chance(TEACH_MISSED)) { step = stepById(power, U.pick(missed.slice(0, 3))).step; why = 'missed'; }
-        else { step = steps[Math.min(steps.length - 1, st.p[power].si + 1)]; why = 'next'; }
+        else {
+          // the next thing he will learn: a new game he is about to visit (introVisits), else the step above his own
+          var aheads = st.cb.filter(function (c) { return c.p === power && c.intro === 1; }).map(function (c) { return stepById(power, c.s); })
+            .filter(function (f) { return f && f.index > st.p[power].si; });
+          var ahead = aheads.length ? U.pick(aheads) : null;
+          step = ahead ? ahead.step : steps[Math.min(steps.length - 1, st.p[power].si + 1)]; why = 'next';
+        }
         var t = fresh1(power, step, null, why === 'next');
-        if (t) { t.stretch = true; t.teach = why; remember(t.id); }
+        if (t) { t.stretch = true; t.teach = why; remember(t); }
         st.rng = rng.s;
         return t;
       },
       // For the parent page and tests: how the wild one's topics are weighted right now.
       teachWeights: function () {
         var out = {};
-        HARD.forEach(function (p) { out[p] = { missRate: missRate(p), weight: 1 + TEACH_WEIGHT * missRate(p), missed: missedSteps(p) }; });
+        active().forEach(function (p) { out[p] = { missRate: missRate(p), weight: 1 + TEACH_WEIGHT * missRate(p), missed: missedSteps(p) }; });
         return out;
       },
       heart: function (o) {
@@ -378,8 +558,15 @@
         res = res || {};
         var out = { stepUp: false, stepDown: false, proven: false, comebackFixed: false };
         if (!task || HARD.indexOf(task.power) < 0) return out;
-        var P = st.p[task.power], steps = ladder(task.power), today = res.today != null ? res.today : 0;
+        var P = st.p[task.power], steps = lad(task.power), today = res.today != null ? res.today : 0;
         var ft = !!(res.ok && res.firstTry && !res.helped);
+        // A super hit is a task from the step above his own. Right on the first try, it proves he is ready for that step:
+        // he moves up to it at once. A miss costs nothing and is not counted.
+        if (res.super) {
+          var at = stepById(task.power, task.step);
+          if (ft && at && at.index === P.si + 1) { P.si = at.index; P.sid = steps[P.si].id; P.h[steps[P.si].id] = [1]; P.run = 0; out.stepUp = true; }
+          return out;
+        }
         P.a++;
         P.ft.push(ft ? 1 : 0); if (P.ft.length > 20) P.ft.shift();
         var h = P.h[task.step] = P.h[task.step] || [];
@@ -396,7 +583,7 @@
           st.cb.push({ p: task.power, s: task.step, k: task.k, id: task.id, kind: 'same', day: today + 1 });
           if (st.cb.length > 40) st.cb.splice(0, st.cb.length - 40);
         }
-        var cur = steps[P.si], placing = P.pl < PLACE, tgt = targetIndex(task.power, gradeOf(st, task.power)), cap = ceilingIndex(task.power, gradeOf(st, task.power));
+        var cur = steps[P.si], placing = P.pl < PLACE, tgt = targetIndex(task.power, gradeOf(st, task.power), st.lang), cap = ceilingIndex(task.power, gradeOf(st, task.power), st.lang);
         if (cur && task.step === cur.id) {
           var up = 0, down = false;
           if (placing) {
@@ -407,10 +594,17 @@
             else if (P.run >= 2) up = 1;                          // after a miss: two in a row for one step
             up = Math.max(0, Math.min(up, cap - P.si));            // placement never goes past the class above his own
           } else {
+            // The steady rule: up after four first-try rights in the last five at this step, down after two misses in the
+            // last four. When he has proved himself in the topic (SURE of his last ten answers there right on the first
+            // try), three clean answers at a step are enough, and a clean run of HOT means the step is far too easy:
+            // two steps up. So a child who finds it easy meets harder tasks quickly, and one at his level is not pushed.
             var last5 = h.slice(-5), last4 = h.slice(-4);
             var rights = last5.reduce(function (a, b) { return a + b; }, 0);
             var misses = last4.filter(function (x) { return !x; }).length;
-            if (h.length >= 4 && rights >= 4) up = 1;
+            var ten = P.ft.slice(-10), sure = ten.length >= 6 && ten.reduce(function (a, b) { return a + b; }, 0) / ten.length >= SURE;
+            var row3 = sure && h.length >= 3 && h.every(function (x) { return x; });
+            var hot = P.ft.length >= HOT && P.ft.slice(-HOT).every(function (x) { return x; });
+            if (row3 || (h.length >= 4 && rights >= 4)) up = hot ? 2 : 1;
             else if (misses >= 2) down = true;
           }
           if (up > 0 && P.si < steps.length - 1) { P.si = Math.min(steps.length - 1, P.si + up); P.h[steps[P.si].id] = []; P.run = 0; out.stepUp = true; }
@@ -423,9 +617,10 @@
       toJSON: function () { st.rng = rng.s; return clone(st); },
       summary: function () {
         var out = {};
-        HARD.forEach(function (p) {
-          var P = st.p[p], steps = ladder(p), s = steps[P.si] || {};
+        topicsFor(st.lang).forEach(function (p) {
+          var P = st.p[p], steps = lad(p), s = steps[P.si] || {};
           out[p] = {
+            on: active().indexOf(p) >= 0, startGrade: gradeOf(st, p),
             stepIndex: P.si, stepCount: steps.length, stepId: s.id, stepName: s.name ? s.name[st.lang] : '',
             grade: s.grade, firstTryRate: P.ft.length ? P.ft.reduce(function (a, b) { return a + b; }, 0) / P.ft.length : null,
             answered: P.a, provenSteps: P.pr.length, comebacksFixed: P.fx,
@@ -443,10 +638,10 @@
       // For the setup screen: what a starting level means. Every kind of task of that class takes its turn: n = 0 is the
       // first kind, n = 1 the next, and so on round. A class with no step of its own shows the step the game aims for.
       example: function (power, grade, n, avoidId) {
-        var steps = ladder(power); if (!steps.length) return null;
+        var steps = lad(power); if (!steps.length) return null;
         var g = clamp(grade | 0, 0, 5);
         var kinds = steps.filter(function (s) { return s.grade === g; });
-        if (!kinds.length) kinds = [steps[targetIndex(power, g)]];
+        if (!kinds.length) kinds = [steps[targetIndex(power, g, st.lang)]];
         var at = (((n | 0) % kinds.length) + kinds.length) % kinds.length, step = kinds[at];
         return { stepId: step.id, name: step.name ? step.name[st.lang] : '', grade: step.grade, at: at, kinds: kinds.length, task: fresh1(power, step, avoidId || null, true) };
       },
@@ -491,6 +686,55 @@
     }
     return null;
   }
+  /* the arrow games, worked out here by their own route (src/content/natur.js has the walk the screen shows) */
+  var STEP_D = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] };
+  function stoneAt(sg, x, y) { for (var i = 0; i < sg.stones.length; i++) if (sg.stones[i][0] === x && sg.stones[i][1] === y) return true; return false; }
+  // whether a row of arrows takes him to the berry: he must stand on it before the edge or a stone stops him
+  function walkTo(sg, row) {
+    var x = sg.start[0], y = sg.start[1];
+    for (var i = 0; i < row.length; i++) {
+      var d = STEP_D[row[i]];
+      if (!d) return false;
+      x += d[0]; y += d[1];
+      if (x < 0 || y < 0 || x >= sg.w || y >= sg.h || stoneAt(sg, x, y)) return false;
+      if (x === sg.goal[0] && y === sg.goal[1]) return true;
+    }
+    return false;
+  }
+  // every cell's distance to the berry, by a breadth-first search round the stones
+  function stepsFrom(sg) {
+    var dist = {}, q = [sg.goal];
+    dist[sg.goal.join(',')] = 0;
+    while (q.length) {
+      var c = q.shift();
+      Object.keys(STEP_D).forEach(function (k) {
+        var n = [c[0] + STEP_D[k][0], c[1] + STEP_D[k][1]], key = n.join(',');
+        if (n[0] < 0 || n[1] < 0 || n[0] >= sg.w || n[1] >= sg.h || stoneAt(sg, n[0], n[1]) || key in dist) return;
+        dist[key] = dist[c.join(',')] + 1; q.push(n);
+      });
+    }
+    return dist;
+  }
+  // a right row: the shortest way; with a row laid already, that row with its one wrong arrow turned
+  function stepsSolution(sg) {
+    if (sg.row) {
+      for (var i = 0; i < sg.row.length; i++) for (var k in STEP_D) {
+        if (k === sg.row[i]) continue;
+        var row = sg.row.slice(); row[i] = k;
+        if (walkTo(sg, row)) return row;
+      }
+      return null;
+    }
+    var dist = stepsFrom(sg), at = sg.start.slice(), out = [];
+    if (!(at.join(',') in dist)) return null;
+    while (dist[at.join(',')] > 0) {
+      for (var d in STEP_D) {
+        var n = [at[0] + STEP_D[d][0], at[1] + STEP_D[d][1]];
+        if (dist[n.join(',')] === dist[at.join(',')] - 1) { out.push(d); at = n; break; }
+      }
+    }
+    return out;
+  }
   function check(task, answer) {
     var r = { ok: false, smart: false, smartKey: null, solution: null };
     var ui = task.ui;
@@ -506,6 +750,37 @@
     } else if (ui === 'breathe') {
       r.solution = true;
       r.ok = answer !== false;
+    } else if (ui === 'secret') {
+      r.solution = task.secret.word;
+      r.ok = typeof answer === 'string' && answer.toLocaleUpperCase() === task.secret.word;
+    } else if (ui === 'match') {
+      r.solution = task.match.correct;
+      r.ok = answer === task.match.correct;
+    } else if (ui === 'beats') {
+      r.solution = task.beats.n;
+      r.ok = answer === task.beats.n;
+    } else if (ui === 'give') {
+      r.solution = task.give.n;
+      r.ok = answer === task.give.n;
+    } else if (ui === 'shapes') {
+      var want = [];
+      task.shapes.items.forEach(function (it, k) { if (it.s === task.shapes.want) want.push(k); });
+      r.solution = want;
+      var got = Array.isArray(answer) ? answer.slice().sort(function (a, c) { return a - c; }) : null;
+      r.ok = !!got && got.length === want.length && got.every(function (v, k) { return v === want[k]; });
+    } else if (ui === 'test') {
+      r.solution = task.test.correct;
+      r.ok = answer === task.test.correct;
+    } else if (ui === 'strings') {
+      r.solution = task.strings.correct;
+      r.ok = answer === task.strings.correct;
+    } else if (ui === 'steps') {
+      // any row of arrows that walks him to the berry is right, not only the shortest; with a row laid already, one
+      // arrow of it is changed
+      var sg = task.steps;
+      r.solution = stepsSolution(sg);
+      r.ok = Array.isArray(answer) && answer.length > 0 && answer.length <= sg.max && walkTo(sg, answer) &&
+        (!sg.row || (answer.length === sg.row.length && answer.filter(function (d, k) { return d !== sg.row[k]; }).length === 1));
     } else if (ui === 'build') {
       var b = task.build, vals = tileVals(task), sm = task.key && task.key.smart;
       var picks = validPicks(answer, vals.length) ? answer : null;
@@ -631,7 +906,7 @@
     if (v == null) return true;
     if (typeof v !== 'object' || VISUALS.indexOf(v.type) < 0) return 'bad visual type ' + (v && v.type);
     var need = { big: ['text'], emoji: ['emoji'], dots: ['n'], clock: ['h', 'm'], frac: ['n', 'd', 'shape'], seq: ['items'], grid: ['size', 'cells'],
-      balance: ['rows'], machine: ['pairs', 'ask'], line: ['min', 'max'], scene: ['emoji', 'text'] }[v.type];
+      balance: ['rows'], machine: ['pairs', 'ask'], line: ['min', 'max'], scene: ['emoji', 'text'], tally: ['n'], hear: ['n'], shapes: ['items', 'want'], lab: ['scene'] }[v.type];
     for (var i = 0; i < need.length; i++) if (v[need[i]] == null) return 'visual ' + v.type + ' lacks ' + need[i];
     if (v.type === 'grid' && (v.cells.length !== v.size * v.size || [2, 3].indexOf(v.size) < 0)) return 'grid size';
     if (v.type === 'frac' && ['pie', 'bar'].indexOf(v.shape) < 0) return 'frac shape';
@@ -640,16 +915,26 @@
     if (v.type === 'line' && v.at != null && (v.at < v.min || v.at > v.max)) return 'line marker out of range';
     if (v.type === 'line' && v.hop && (v.hop.from + v.hop.by < v.min || v.hop.from + v.hop.by > v.max)) return 'line hop out of range';
     if (v.type === 'dots' && (v.n < 0 || v.n > 50)) return 'dots range';
+    if ((v.type === 'tally' || v.type === 'hear') && (v.n < 1 || v.n > 10 || (v.n | 0) !== v.n)) return v.type + ' range';
+    if (v.type === 'lab' && LABS.indexOf(v.scene) < 0) return 'lab scene ' + v.scene;
+    if (v.type === 'shapes' && (!Array.isArray(v.items) || !v.items.length || v.items.length > 8 || v.items.some(function (x) { return SHAPES.indexOf(x.s) < 0; }))) return 'shapes items';
     return true;
   }
+  var SHAPES = ['circle', 'triangle', 'square'];
+  var LABS = ['float', 'ramp', 'strings', 'grid'];
   function strings(task) {
     var out = [task.prompt, task.say];
+    if (task.intro) out.push(task.intro);
+    var blk = task[task.ui];
+    if (blk && Array.isArray(blk.says)) blk.says.forEach(function (s) { out.push(s); });
+    if (task.ui === 'match' && task.match.pieces) task.match.pieces.forEach(function (p) { out.push(p.say); });
     (task.how || []).forEach(function (h) { out.push(h.text, h.say); });
     if (task.praise) out.push(task.praise);
     if (task.smartPraise) out.push(task.smartPraise);
-    if (task.choice) task.choice.options.forEach(function (o) { if (o.label) out.push(o.label); });
+    if (task.choice) task.choice.options.forEach(function (o) { if (o.label) out.push(o.label); if (o.say != null) out.push(o.say); });
     if (task.visual && task.visual.text) out.push(task.visual.text);
     if (task.visual && task.visual.caption) out.push(task.visual.caption);
+    if (task.visual && task.visual.say) out.push(task.visual.say);
     return out;
   }
 
@@ -802,6 +1087,31 @@
     return null;
   }
 
+  // the English word a spoken line says: the first sentence tagged [en] (src/voice.js plays it in the English voice)
+  function enSaid(text) {
+    var m = /(?:^|[.!?…]\s+)\[en\]\s*([^.!?…]+)[.!?…]/.exec(String(text || ''));
+    return m ? m[1].trim().toLowerCase() : null;
+  }
+  function lexEmojis(word, lang) {
+    var O = content().ord, out = [];
+    if (!O) return out;
+    O.lex.forEach(function (r) { var w = r[1 + LANGS.indexOf(lang)]; if (w && w.toLowerCase() === word) out.push(r[0]); });
+    return out;
+  }
+  // an independent copy of the English numbers and colours (the content file has its own)
+  var EN_NUM = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+  var EN_COL = { red: '🔴', orange: '🟠', yellow: '🟡', green: '🟢', blue: '🔵', purple: '🟣', black: '⚫', white: '⚪', brown: '🟤' };
+  // A spoken line may mark a sentence as English with "[en] " at its start, and nowhere else.
+  function badTag(s) {
+    var at = String(s).indexOf('[');
+    while (at >= 0) {
+      if (String(s).slice(at, at + 5) !== '[en] ') return 'bad tag in: ' + s;
+      if (at > 0 && !/[.!?…] $/.test(String(s).slice(Math.max(0, at - 2), at))) return 'English tag not at a sentence start: ' + s;
+      at = String(s).indexOf('[', at + 1);
+    }
+    return null;
+  }
+
   function verifySemantic(task) {
     var k = task.key || {}, ch = task.choice, v = task.visual;
     var numOpt = function (want) { return exactlyOne(ch.options, ch.correct, function (o) { return near(parseLabel(o.label), want); }); };
@@ -869,7 +1179,26 @@
       }
       case 'english': {
         var w3 = lexWord(v.emoji, 'en');
-        return w3 ? labOpt(w3) : 'no English word';
+        if (!w3) return 'no English word';
+        // cards he can hear: each card's speaker says that card's own word, in the English voice
+        var badSay = ch.options.filter(function (o) { return o.say != null && enSaid(o.say) !== String(o.label).toLowerCase(); })[0];
+        if (badSay) return 'card ' + badSay.label + ' says ' + badSay.say;
+        return labOpt(w3);
+      }
+      case 'enpic': {
+        // the English word is the one the voice says, or, when he reads it, the one on the screen
+        var we = v && v.type === 'big' ? String(v.text).toLowerCase() : enSaid(task.say);
+        if (!we) return 'no English word in the task';
+        var pics = lexEmojis(we, 'en');
+        if (!pics.length) return 'English word ' + we + ' has no picture';
+        return exactlyOne(ch.options, ch.correct, function (o) { return pics.indexOf(o.emoji) >= 0; });
+      }
+      case 'enword': {
+        var wn = enSaid(task.say);
+        if (!wn) return 'no English word in the task';
+        var num = EN_NUM.indexOf(wn), col = EN_COL[wn];
+        if (num < 1 && !col) return 'unknown English word ' + wn;
+        return exactlyOne(ch.options, ch.correct, function (o) { return num >= 1 ? parseLabel(o.label) === num : o.emoji === col; });
       }
       case 'rhyme': {
         var O = content().ord, groups = O.rhymes[k.lang];
@@ -908,9 +1237,100 @@
         return labOpt(item[1]);
       }
       case 'heart': return true;
+      // the class 0 pack: each answer worked out again from the pictures' names
+      case 'beats': {
+        var wb = lexWord(task.beats.emoji, k.lang), ob = content().ord;
+        if (!wb) return 'beats: word missing';
+        var nv = ob.vowels(wb);
+        return nv === task.beats.n ? true : 'beats: ' + wb + ' has ' + nv + ' vowels but ' + task.beats.n + ' beats';
+      }
+      case 'rhymepiece': {
+        var groups = content().ord.rhymePics, mt2 = task.match;
+        var gOf2 = function (e) { for (var i = 0; i < groups.length; i++) if (groups[i].indexOf(e) >= 0) return i; return -1; };
+        var tg2 = gOf2(mt2.target);
+        if (tg2 < 0 || mt2.pieces.some(function (p) { return gOf2(p.emoji) < 0; })) return 'rhyme piece unknown';
+        var badName = mt2.pieces.filter(function (p) { var w = lexWord(p.emoji, k.lang); return !w || p.say !== w.charAt(0).toLocaleUpperCase() + w.slice(1) + '.'; })[0];
+        if (badName) return 'piece says ' + badName.say;
+        return exactlyOne(mt2.pieces, mt2.correct, function (p) { return gOf2(p.emoji) === tg2 && p.emoji !== mt2.target; });
+      }
+      case 'secret': {
+        var sw2 = task.secret, tw = lexWord(sw2.target, k.lang);
+        if (!tw || tw.toLocaleUpperCase() !== sw2.word) return 'secret word is not the picture: ' + sw2.word;
+        for (var q = 0; q < sw2.pics.length; q++) {
+          var pw2 = lexWord(sw2.pics[q], k.lang);
+          if (!pw2 || pw2.charAt(0).toLocaleUpperCase() !== sw2.word[q]) return 'picture ' + sw2.pics[q] + ' does not start with ' + sw2.word[q];
+          if (/^(hj|hv|c|ch|z)/.test(pw2)) return 'picture ' + pw2 + ' has a silent or odd first letter';
+        }
+        return true;
+      }
+      case 'samenum': {
+        var amt = function (vv) { return !vv ? NaN : vv.type === 'big' ? parseLabel(vv.text) : vv.n; };
+        var want2 = amt(v);
+        if (!(want2 >= 1 && want2 <= 10)) return 'samenum out of 1 to 10';
+        if (v.type === 'hear' && !new RegExp('(^|\\D)' + want2 + '\\.$').test(task.say)) return 'samenum: the number is not spoken';
+        var forms = ch.options.map(function (o) { return o.visual ? o.visual.type : 'num'; });
+        if (forms.indexOf(v.type === 'big' ? 'num' : v.type) >= 0) return 'samenum: an option looks like the question';
+        return exactlyOne(ch.options, ch.correct, function (o) { return (o.visual ? amt(o.visual) : parseLabel(o.label)) === want2; });
+      }
+      case 'give': {
+        var m2 = /(\d+)/.exec(task.say), ng = m2 ? +m2[1] : NaN;
+        if (ng !== task.give.n || String(task.prompt).indexOf(String(ng)) < 0) return 'give: asks for ' + ng + ' but needs ' + task.give.n;
+        return true;
+      }
+      case 'shapes': {
+        var cnt = task.shapes.items.filter(function (it) { return it.s === task.shapes.want; }).length;
+        if (cnt < 2 || cnt > 4 || task.shapes.items.length - cnt < 2) return 'shapes: ' + cnt + ' of ' + task.shapes.items.length;
+        var nm = { circle: /cirkl|circle/, triangle: /trekant|triangle/, square: /firkant|square/ }[task.shapes.want];
+        return nm && nm.test(task.say.toLowerCase()) ? true : 'shapes: the spoken name is not the wanted shape';
+      }
+      // Natur og teknik (slice 5): each answer worked out again from this copy of the fact list in slice-5.md
+      case 'float': {
+        var tt = task.test, fl = NATUR_FLOATS[tt.thing];
+        if (fl == null) return 'float: ' + tt.thing + ' is not in the fact list';
+        if (tt.correct !== (fl ? 0 : 1)) return 'float: ' + tt.thing + (fl ? ' floats' : ' sinks');
+        var hv = task.how[0].visual;
+        if (!hv || hv.thing !== tt.thing || hv.floats !== fl) return 'float: the how shows something else';
+        if (new RegExp(fl ? 'flyder' : 'synker').test(task.how[0].text) === false) return 'float: the how says the wrong thing';
+        return true;
+      }
+      case 'ramp': {
+        var ta = task.test.angles;
+        if (!Array.isArray(ta) || ta.length !== 2 || Math.abs(ta[0] - ta[1]) < 12) return 'ramp: the two ramps must differ clearly';
+        return task.test.correct === (ta[0] > ta[1] ? 0 : 1) ? true : 'ramp: the steeper ramp is ' + (ta[0] > ta[1] ? 0 : 1);
+      }
+      case 'legs': {
+        var nl = NATUR_LEGS[v && v.emoji];
+        if (nl == null) return 'legs: ' + (v && v.emoji) + ' is not in the checked pictures';
+        if (ch.options.length !== 5) return 'legs: five choices';
+        return exactlyOne(ch.options, ch.correct, function (o) { return parseLabel(o.label) === nl; });
+      }
+      case 'tone': {
+        var sr = task.strings, short = sr.lens[0] < sr.lens[1] ? 0 : 1;
+        if (sr.lens[1 - short] < sr.lens[short] * 1.6) return 'tone: the lengths must differ clearly';
+        if (!(sr.midi[short] > sr.midi[1 - short])) return 'tone: the short string must sound lighter';
+        var want3 = sr.ask === 'lys' ? short : 1 - short;
+        if (!new RegExp(sr.ask === 'lys' ? 'lyse' : 'dybe').test(task.say) || /høj/i.test(task.say + task.prompt)) return 'tone: the words';
+        return sr.correct === want3 ? true : 'tone: the ' + sr.ask + ' string is ' + want3;
+      }
+      case 'path':
+      case 'fix': {
+        var sp3 = task.steps, best = stepsFrom(sp3)[sp3.start.join(',')];
+        if (best == null) return 'steps: no way to the berry';
+        if (best > sp3.max) return 'steps: the way takes ' + best + ' but the row holds ' + sp3.max;
+        if (k.type === 'fix') {
+          if (!sp3.row || walkTo(sp3, sp3.row)) return 'fix: the row laid already must be wrong';
+          if (!stepsSolution(sp3)) return 'fix: no single arrow mends the row';
+        } else if (sp3.row) return 'path: no row laid already';
+        if (task.grade === 0 && (sp3.stones.length || best < 2 || best > 4)) return 'path: class 0 is two to four steps, no stones';
+        if (task.grade >= 1 && (best < 4 || best > 6)) return 'steps: four to six steps from class 1';
+        return true;
+      }
       default: return 'no key type';
     }
   }
+  // the fact list of slice-5.md, written out again for verify: floats (true) or sinks, and legs on a checked picture
+  var NATUR_FLOATS = { '🍎': true, '⛵': true, '🥄': false, '🔑': false, stone: false };
+  var NATUR_LEGS = { '🐶': 4, '🐦': 2, '🦆': 2, '🦉': 2, '🦜': 2, '🦅': 2, '🐌': 0, '🐟': 0 };
   function buildReach(task) {
     var vals = tileVals(task), b = task.build;
     if (b.op === 'product') {
@@ -958,10 +1378,13 @@
       for (var s = 0; s < strs.length; s++) {
         if (typeof strs[s] !== 'string') return 'non-string text';
         if (/\{\w+\}|undefined|NaN|null|—/.test(strs[s])) return 'unfilled or bad text: ' + strs[s];
+        var bt = badTag(strs[s]); if (bt) return bt;
       }
       if (task.ui === 'choice') {
         var ch = task.choice, max = task.power === 'hjerte' ? 60 : 22;
-        if (!Array.isArray(ch.options) || ch.options.length < 2 || ch.options.length > 4) return 'choice needs 2 to 4 options';
+        // 2 to 4 options; "how many legs" has five (0, 2, 4, 6, 8)
+        var most = task.key && task.key.type === 'legs' ? 5 : 4;
+        if (!Array.isArray(ch.options) || ch.options.length < 2 || ch.options.length > most) return 'choice needs 2 to ' + most + ' options';
         if ((ch.correct | 0) !== ch.correct || ch.correct < 0 || ch.correct >= ch.options.length) return 'bad correct index';
         var seen = {};
         for (var o = 0; o < ch.options.length; o++) {
@@ -1008,13 +1431,51 @@
         var br = task.breathe;
         if (!(br.breaths >= 1 && br.breaths <= 6 && br.inMs >= 1500 && br.inMs <= 8000 && br.outMs >= 1500 && br.outMs <= 9000)) return 'breathe range';
       }
+      // the class 0 pack: nothing to read, numbers 1 to 10, never q, w, x or z
+      if (task.ui === 'secret') {
+        var sw = task.secret;
+        if (!/^[A-ZÆØÅ]{2,4}$/.test(sw.word) || /[QWXZ]/.test(sw.word)) return 'secret word: ' + sw.word;
+        if (!Array.isArray(sw.pics) || sw.pics.length !== sw.word.length) return 'secret: one picture per letter';
+        if (!Array.isArray(sw.tiles) || sw.tiles.length > 8 || sw.tiles.some(function (x) { return !/^[A-ZÆØÅ]$/.test(x) || /[QWXZ]/.test(x); })) return 'secret tiles';
+        var sp2 = sw.tiles.slice();
+        for (var c2 = 0; c2 < sw.word.length; c2++) { var at2 = sp2.indexOf(sw.word[c2]); if (at2 < 0) return 'secret tiles lack ' + sw.word[c2]; sp2.splice(at2, 1); }
+        if (sw.pics.indexOf(sw.target) >= 0) return 'secret: the answer picture is in the row';
+      }
+      if (task.ui === 'match') {
+        var mt = task.match;
+        if (!Array.isArray(mt.pieces) || mt.pieces.length < 2 || mt.pieces.length > 4) return 'match pieces';
+        if ((mt.correct | 0) !== mt.correct || !mt.pieces[mt.correct]) return 'match correct';
+        if (mt.pieces.some(function (x) { return !x.emoji || !x.say; })) return 'match piece without picture or name';
+      }
+      if (task.ui === 'beats' && !(task.beats.n >= 1 && task.beats.n <= 4 && task.beats.max >= task.beats.n + 2)) return 'beats range';
+      if (task.ui === 'give' && !(task.give.n >= 1 && task.give.n <= 10 && task.give.total === 10)) return 'give range';
+      if (task.ui === 'shapes') {
+        var hv2 = checkVisual({ type: 'shapes', items: task.shapes.items, want: task.shapes.want });
+        if (hv2 !== true) return hv2;
+      }
+      // Natur og teknik: two answers in the guess-then-test games and the strings, a small grid in the arrow games
+      if (task.ui === 'test') {
+        var tst = task.test;
+        if (['float', 'ramp'].indexOf(tst.scene) < 0 || [0, 1].indexOf(tst.correct) < 0 || !Array.isArray(tst.says)) return 'test shape';
+        if (tst.scene === 'float' && tst.says.length !== 1) return 'test: the thing says its name';
+      }
+      if (task.ui === 'strings') {
+        var sr2 = task.strings;
+        if (!Array.isArray(sr2.lens) || sr2.lens.length !== 2 || !Array.isArray(sr2.midi) || sr2.midi.length !== 2 || [0, 1].indexOf(sr2.correct) < 0 || ['lys', 'dyb'].indexOf(sr2.ask) < 0) return 'strings shape';
+      }
+      if (task.ui === 'steps') {
+        var sq = task.steps, inGrid = function (c) { return Array.isArray(c) && c[0] >= 0 && c[1] >= 0 && c[0] < sq.w && c[1] < sq.h; };
+        if (!(sq.w >= 3 && sq.w <= 6 && sq.h >= 3 && sq.h <= 5) || !inGrid(sq.start) || !inGrid(sq.goal) || !Array.isArray(sq.stones) || !sq.stones.every(inGrid)) return 'steps grid';
+        if (sq.start.join() === sq.goal.join() || stoneAt(sq, sq.start[0], sq.start[1]) || stoneAt(sq, sq.goal[0], sq.goal[1])) return 'steps: start, berry and stones overlap';
+        if (!(sq.max >= 2 && sq.max <= 8) || (sq.row && (!Array.isArray(sq.row) || sq.row.length !== sq.max || sq.row.some(function (d) { return !STEP_D[d]; })))) return 'steps row';
+      }
       return verifySemantic(task);
     } catch (e) {
       return 'verify error: ' + e.message;
     }
   }
 
-  var api = { create: create, verify: verify, check: check, LANGS: LANGS, POWERS: HARD, _solveEq: solveEq, _speak: speak, _fmt: fmtNum };
+  var api = { create: create, verify: verify, check: check, LANGS: LANGS, POWERS: HARD, topicsFor: topicsFor, _solveEq: solveEq, _speak: speak, _fmt: fmtNum, _walkTo: walkTo };
   G.Brain = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

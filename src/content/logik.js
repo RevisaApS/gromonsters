@@ -66,6 +66,7 @@
     down: { da: 'Tallet bliver {k} mindre hver gang.', sv: 'Det blir {k} mindre varje gång.', no: 'Det blir {k} mindre hver gang.', en: 'It goes down by {k} each time.' },
     stepOk: { da: 'Ja! Samme spring hver gang.', sv: 'Rätt: samma hopp varje gång.', no: 'Riktig: samme hopp hver gang.', en: 'Right: the same jump each time.' },
     gridS: { da: 'Hver figur er der én gang i hver række og i hver søjle. Hvad mangler?', sv: 'Varje rad och varje kolumn har varje figur en gång. Vad fattas?', no: 'Hver rad og hver kolonne har hver figur én gang. Hva mangler?', en: 'Each row and each column has each picture once. What is missing?' },
+    gridI: { da: 'Hver figur er der én gang i hver række og i hver søjle.', sv: 'Varje rad och varje kolumn har varje figur en gång.', no: 'Hver rad og hver kolonne har hver figur én gang.', en: 'Each row and each column has each picture once.' },
     gridH1: { da: 'Hver figur er der én gang i hver række og hver søjle.', sv: 'Varje rad och kolumn har varje figur en gång.', no: 'Hver rad og kolonne har hver figur én gang.', en: 'Each row and column has each picture once.' },
     gridH2: { da: 'Her mangler {x}.', sv: 'Här fattas {x}.', no: 'Her mangler {x}.', en: '{x} is missing here.' },
     gridS2: { da: 'Se, hvilken figur rækken og søjlen mangler.', sv: 'Se vilken figur raden och kolumnen saknar.', no: 'Se hvilken figur raden og kolonnen mangler.', en: 'See which picture the row and the column are missing.' },
@@ -260,10 +261,11 @@
       cells[p.g] = '?';
       var other = ans === p.a ? p.b : p.a;
       return {
-        ui: 'choice', prompt: tx(T.gap, L), say: tx(T.gridS, L),
+        // the rule is spoken only the first times he meets the grid (intro); after that the question alone
+        ui: 'choice', prompt: tx(T.gap, L), say: tx(T.gap, L), intro: tx(T.gridI, L),
         visual: { type: 'grid', size: 2, cells: cells },
         choice: U.choice({ emoji: ans }, [{ emoji: other }, { emoji: p.x }], 3),
-        how: [H(tx(T.gridH1, L), { type: 'grid', size: 2, cells: cells }), H(tx(T.gridH2, L, { x: ans }), { type: 'emoji', emoji: ans }, tx(T.gridS2, L))],
+        how: [H(tx(T.gridH1, L), { type: 'grid', size: 2, cells: cells }, tx(T.gridS2, L)), H(tx(T.gridH2, L, { x: ans }), { type: 'emoji', emoji: ans }, tx(T.patS2, L))],
         praise: tx(T.gridOk, L),
         key: { type: 'grid' }
       };
@@ -346,10 +348,10 @@
       cells[row * 3 + other] = '';
       var wr = p.s.filter(function (x) { return x !== ans; });
       return {
-        ui: 'choice', prompt: tx(T.gap, L), say: tx(T.gridS, L),
+        ui: 'choice', prompt: tx(T.gap, L), say: tx(T.gap, L), intro: tx(T.gridI, L),
         visual: { type: 'grid', size: 3, cells: cells },
         choice: U.choice({ emoji: ans }, wr.map(function (x) { return { emoji: x }; }), 3),
-        how: [H(tx(T.gridH1, L), { type: 'grid', size: 3, cells: cells }), H(tx(T.gridH2, L, { x: ans }), { type: 'emoji', emoji: ans }, tx(T.gridS2, L))],
+        how: [H(tx(T.gridH1, L), { type: 'grid', size: 3, cells: cells }, tx(T.gridS2, L)), H(tx(T.gridH2, L, { x: ans }), { type: 'emoji', emoji: ans }, tx(T.patS2, L))],
         praise: tx(T.gridOk, L),
         key: { type: 'grid' }
       };

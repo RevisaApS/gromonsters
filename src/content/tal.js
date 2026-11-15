@@ -487,7 +487,7 @@
   function nextH(h) { return h % 12 + 1; }
   var SMALL = { da: 'Se så på den lille viser.', sv: 'Titta sedan på den korta visaren.', no: 'Se så på den korte viseren.', en: 'Then look at the short hand.' };
   step({
-    id: 't18', grade: 2, name: { da: 'Hel og halv time', sv: 'Hel och halv timme', no: 'Hel og halv time', en: "O'clock and half past" },
+    id: 't18', grade: 1, name: { da: 'Hel og halv time', sv: 'Hel och halv timme', no: 'Hel og halv time', en: "O'clock and half past" },
     pick: function (U, L, E) { return { h: U.int(1, 12), m: E || U.chance(0.5) ? 0 : 30 }; },
     key: function (p) { return clockLbl(p.h, p.m); },
     make: function (p, L, U) {
@@ -515,12 +515,76 @@
     }
   });
 
+  // Class 2 goes on with the clock: quarter past and quarter to. The digital answer stays on the cards (3:15, 3:45).
+  step({
+    id: 't35', grade: 2, name: { da: 'Kvart over og kvart i', sv: 'Kvart över och kvart i', no: 'Kvart over og kvart på', en: 'Quarter past and quarter to' },
+    pick: function (U, L, E) { return { h: U.int(1, 12), m: E || U.chance(0.5) ? 15 : 45 }; },
+    key: function (p) { return clockLbl(p.h, p.m); },
+    make: function (p, L, U) {
+      var lbl = clockLbl(p.h, p.m), v = { h: p.h, h1: nextH(p.h), lbl: lbl };
+      var wr = p.m === 15 ? [clockLbl(p.h, 45), clockLbl(p.h, 30), clockLbl(nextH(p.h), 15)] : [clockLbl(p.h, 15), clockLbl(nextH(p.h), 45), clockLbl(p.h, 30)];
+      var said = p.m === 15 ? tx({ da: 'Klokken er kvart over {h}.', sv: 'Klockan är kvart över {h}.', no: 'Klokka er kvart over {h}.', en: 'It is quarter past {h}.' }, L, v)
+        : tx({ da: 'Klokken er kvart i {h1}.', sv: 'Klockan är kvart i {h1}.', no: 'Klokka er kvart på {h1}.', en: 'It is quarter to {h1}.' }, L, v);
+      var how = p.m === 15 ? [
+        H(U, L, tx({ da: 'Den store viser peger på 3. Det er et kvarter over.', sv: 'Den långa visaren pekar på 3. Det är en kvart över.', no: 'Den lange viseren peker på 3. Det er et kvarter over.', en: 'The long hand points to 3. That is a quarter past.' }, L), { type: 'clock', h: p.h, m: p.m }),
+        H(U, L, tx({ da: 'Den lille viser er lige efter {h}. Klokken er {lbl}.', sv: 'Den korta visaren är strax efter {h}. Klockan är {lbl}.', no: 'Den korte viseren er rett etter {h}. Klokka er {lbl}.', en: 'The short hand is just past {h}. It is {lbl}.' }, L, v), big(lbl), tx(SMALL, L) + ' ' + said)
+      ] : [
+        H(U, L, tx({ da: 'Den store viser peger på 9. Det er et kvarter i.', sv: 'Den långa visaren pekar på 9. Det är en kvart i.', no: 'Den lange viseren peker på 9. Det er et kvarter på.', en: 'The long hand points to 9. That is a quarter to.' }, L), { type: 'clock', h: p.h, m: p.m }),
+        H(U, L, tx({ da: 'Den lille viser er lige før {h1}. Klokken er {lbl}.', sv: 'Den korta visaren är strax före {h1}. Klockan är {lbl}.', no: 'Den korte viseren er rett før {h1}. Klokka er {lbl}.', en: 'The short hand is just before {h1}. It is {lbl}.' }, L, v), big(lbl), tx(SMALL, L) + ' ' + said)
+      ];
+      return {
+        ui: 'choice', prompt: tx(COMMON.time, L), say: tx(COMMON.time, L),
+        visual: { type: 'clock', h: p.h, m: p.m },
+        choice: U.choice({ label: lbl }, wr.slice(0, 2).map(function (x) { return { label: x }; }), 3),
+        how: how,
+        praise: tx({ da: 'Ja! Først den lille viser, så den store.', sv: 'Rätt! Först den korta visaren, sedan den långa.', no: 'Riktig! Først den korte viseren, så den lange.', en: 'Right! The short hand, then the long hand.' }, L),
+        key: { type: 'clock' }
+      };
+    }
+  });
+
   var COINS = { da: [1, 2, 5, 10, 20], sv: [1, 2, 5, 10], no: [1, 5, 10, 20], en: [1, 2, 5, 10, 20] };
   function greedy(A, coins) {
     var out = [], left = A, cs = coins.slice().sort(function (a, b) { return b - a; });
     cs.forEach(function (c) { while (left >= c) { out.push(c); left -= c; } });
     return out;
   }
+  // Class 1 learns money together with adding (Steve, 2026-11-15): pay a small amount with 1, 2, 5 and 10 kroner coins.
+  // He cannot read yet, so the voice says the amount ("Betal 7 kroner."), one recorded sentence per amount from 3 to 20.
+  var COINS1 = [1, 2, 5, 10];
+  step({
+    id: 't34', grade: 1, name: { da: 'Mønter til 20 kroner', sv: 'Mynt till 20 kronor', no: 'Mynter til 20 kroner', en: 'Coins up to 20 kroner' },
+    pick: function (U, L, E) {
+      var A = U.int(E ? 3 : 6, E ? 10 : 20), g = greedy(A, COINS1);
+      if (g.length < 2 || g.length > (E ? 3 : 4)) return null;
+      var purse = g.slice(), small = COINS1.filter(function (c) { return c < Math.max.apply(null, g); });
+      if (!small.length) small = [1];
+      var add = U.int(2, 3);
+      for (var i = 0; i < add; i++) purse.push(U.pick(small));
+      return { A: A, v: sortN(purse) };
+    },
+    key: function (p) { return p.A + 'kr:' + p.v.join('.'); },
+    make: function (p, L, U) {
+      var plan = greedy(p.A, COINS1), v = { A: p.A, plan: plan.join(' + ') };
+      var exact = tx({ da: 'Det skal passe præcis.', sv: 'Det ska bli exakt.', no: 'Det skal bli akkurat.', en: 'It must be exact.' }, L);
+      return {
+        ui: 'build',
+        prompt: tx({ da: 'Betal {A} kr', sv: 'Betala {A} kr', no: 'Betal {A} kr', en: 'Pay {A} kr' }, L, v),
+        say: tx({ da: 'Betal {A} kroner.', sv: 'Betala {A} kronor.', no: 'Betal {A} kroner.', en: 'Pay {A} kroner.' }, L, v) + ' ' + exact,
+        visual: big(p.A + ' kr'),
+        build: { target: p.A, op: 'sum', tiles: tiles(U.shuffle(p.v)), unit: 'kr' },
+        how: [
+          H(U, L, tx({ da: 'Start med den største mønt, der passer.', sv: 'Börja med det största myntet som passar.', no: 'Start med den største mynten som passer.', en: 'Start with the biggest coin that fits.' }, L), big(plan[0] + ' kr')),
+          H(U, L, tx({ da: 'Tag så de næste: {plan} = {A} kr.', sv: 'Sedan nästa: {plan} = {A} kr.', no: 'Så de neste: {plan} = {A} kr.', en: 'Then the next ones: {plan} = {A} kr.' }, L, v), big(plan.join(' + ')),
+            tx({ da: 'Tag så de næste mønter, til det passer.', sv: 'Ta sedan nästa mynt tills det stämmer.', no: 'Ta så de neste myntene til det stemmer.', en: 'Then take the next coins until it fits.' }, L))
+        ],
+        praise: tx({ da: 'Ja! Det passer præcis.', sv: 'Rätt! Det blev exakt.', no: 'Riktig! Det ble akkurat.', en: 'Right! That is exactly it.' }, L),
+        smartPraise: tx({ da: 'Flot! Du brugte så få mønter som muligt.', sv: 'Super! Du använde färst mynt.', no: 'Super! Du brukte færrest mynter.', en: 'Super! You used the fewest coins.' }, L),
+        key: { type: 'eq', q: '▢ = ' + p.A, smart: { id: 'fewest', type: 'fewest' }, allowSingle: true }
+      };
+    }
+  });
+
   step({
     id: 't19', grade: 2, name: { da: 'Betal med mønter', sv: 'Betala med mynt', no: 'Betal med mynter', en: 'Pay with coins' },
     pick: function (U, L, E) {
@@ -965,10 +1029,103 @@
     }
   });
 
+  /* ---------------- grade 0, the class 0 pack (slice 4, 2026-11-15) ----------------
+     Numbers 1 to 10 by eye, ear and finger, and plain shapes. Nothing to read: the instruction is spoken, the numbers
+     are dots, tally strokes, a numeral or a spoken word. */
+  var PRAISE0 = { da: ['Flot!', 'Ja!', 'Super!'], en: ['Well done!', 'Yes!', 'Super!'] };
+  function praise0(U, L) { return U.pick(PRAISE0[L] || PRAISE0.en); }
+  function countHow(U, L, n, vis) {
+    var s = seq(1, n), point = tx({ da: 'Peg på dem én ad gangen, og tæl.', sv: 'Peka på en i taget och räkna.', no: 'Pek på én om gangen og tell.', en: 'Point at each one and count.' }, L);
+    return H(U, L, point.replace(/\.$/, ': ') + s + '.', vis, point + ' ' + s + '.');
+  }
+  // how a number is shown: dots, tally strokes, the numeral, or only the spoken word
+  function amountVis(form, n) {
+    if (form === 'dots') return { type: 'dots', n: n };
+    if (form === 'tally') return { type: 'tally', n: n };
+    if (form === 'hear') return { type: 'hear', n: n };
+    return big(n);
+  }
+  step({
+    id: 't36', grade: 0, name: { da: 'Samme tal', sv: 'Samma tal', no: 'Samme tall', en: 'The same number' },
+    pick: function (U, L, E) {
+      var n = U.int(1, E ? 5 : 10), shown = U.pick(['dots', 'tally', 'num', 'hear']);
+      var other = { dots: ['num'], tally: ['num', 'dots'], num: ['dots', 'tally'], hear: ['num', 'dots'] }[shown];
+      var near = [n - 1, n + 1, n - 2, n + 2, n + 3, n - 3].filter(function (k) { return k >= 1 && k <= 10; });
+      return { n: n, s: shown, o: U.pick(other), w: U.sample(near.slice(0, 4), 2) };
+    },
+    key: function (p) { return p.s + p.n + p.o + p.w.join(','); },
+    make: function (p, L, U) {
+      var ask = tx({ da: 'Find det samme tal', sv: 'Hitta samma tal', no: 'Finn det samme tallet', en: 'Find the same number' }, L);
+      function opt(k) { return p.o === 'num' ? { label: String(k) } : { visual: amountVis(p.o, k) }; }
+      return {
+        ui: 'choice', prompt: ask, say: ask + '.' + (p.s === 'hear' ? ' ' + p.n + '.' : ''),
+        visual: amountVis(p.s, p.n),
+        choice: U.choice(opt(p.n), p.w.map(opt), 3),
+        how: [countHow(U, L, p.n, { type: 'dots', n: p.n }), H(U, L, String(p.n), big(p.n), is(L, p.n))],
+        praise: praise0(U, L),
+        key: { type: 'samenum' }
+      };
+    }
+  });
+
+  step({
+    id: 't37', grade: 0, name: { da: 'Giv præcis så mange', sv: 'Ge exakt så många', no: 'Gi akkurat så mange', en: 'Give exactly that many' },
+    pick: function (U, L, E) { return { n: U.int(2, E ? 5 : 10) }; },
+    key: function (p) { return String(p.n); },
+    make: function (p, L, U) {
+      var ask = tx({ da: 'Må jeg få {n} bær?', sv: 'Får jag {n} bär?', no: 'Kan jeg få {n} bær?', en: 'Can I have {n} berries?' }, L, p);
+      var one = tx({ da: 'Tæl én ad gangen.', sv: 'Räkna en i taget.', no: 'Tell én om gangen.', en: 'Count one at a time.' }, L);
+      var stop = tx({ da: 'Stop ved {n}.', sv: 'Stanna på {n}.', no: 'Stopp på {n}.', en: 'Stop at {n}.' }, L, p);
+      return {
+        ui: 'give', prompt: ask, say: ask,
+        visual: null,
+        give: { n: p.n, emoji: '🍓', total: 10 },
+        how: [H(U, L, one.replace(/\.$/, ': ') + seq(1, p.n) + '.', { type: 'dots', n: p.n, emoji: '🍓' }, one + ' ' + seq(1, p.n) + '.'), H(U, L, stop, big(p.n), stop)],
+        praise: praise0(U, L),
+        key: { type: 'give' }
+      };
+    }
+  });
+
+  var SHAPES = ['circle', 'triangle', 'square'];
+  var SHAPE_T = {
+    circle: { p: { da: 'Find alle cirklerne', en: 'Find all the circles' }, all: { da: 'Her er alle cirklerne.', en: 'Here are all the circles.' }, rule: { da: 'En cirkel er helt rund.', en: 'A circle is round all the way.' } },
+    triangle: { p: { da: 'Find alle trekanterne', en: 'Find all the triangles' }, all: { da: 'Her er alle trekanterne.', en: 'Here are all the triangles.' }, rule: { da: 'En trekant har 3 hjørner.', en: 'A triangle has 3 corners.' } },
+    square: { p: { da: 'Find alle firkanterne', en: 'Find all the squares' }, all: { da: 'Her er alle firkanterne.', en: 'Here are all the squares.' }, rule: { da: 'En firkant har 4 hjørner.', en: 'A square has 4 corners.' } }
+  };
+  step({
+    id: 't38', grade: 0, name: { da: 'Find figuren', sv: 'Hitta formen', no: 'Finn formen', en: 'Find the shape' },
+    pick: function (U, L, E) {
+      var want = U.pick(SHAPES), k = U.int(2, E ? 3 : 4), others = SHAPES.filter(function (s) { return s !== want; }), items = [];
+      for (var i = 0; i < 8; i++) {
+        var s = i < k ? want : others[i % 2];
+        // squares turn a little (a square on its corner reads as another shape to a six-year-old); triangles any way
+        var rot = s === 'triangle' ? U.int(0, 11) * 30 : s === 'square' ? U.pick([-20, -10, 0, 10, 20]) : 0;
+        items.push({ s: s, z: U.int(0, 2), r: rot, c: U.int(0, 4) });
+      }
+      return { want: want, items: U.shuffle(items) };
+    },
+    key: function (p) { return p.want + ':' + p.items.map(function (x) { return x.s.charAt(0) + x.z + x.r + x.c; }).join(''); },
+    make: function (p, L, U) {
+      var T = SHAPE_T[p.want];
+      if (!T) return null;
+      var ask = tx(T.p, L);
+      return {
+        ui: 'shapes', prompt: ask, say: ask + '.',
+        visual: null,
+        shapes: { items: p.items, want: p.want },
+        how: [H(U, L, tx(T.all, L), { type: 'shapes', items: p.items, want: p.want, mark: true }), H(U, L, tx(T.rule, L), { type: 'shapes', items: [{ s: p.want, z: 2, r: 0, c: 0 }], want: p.want })],
+        praise: praise0(U, L),
+        key: { type: 'shapes' }
+      };
+    }
+  });
+
   /* ---------------- ladder order: easiest first inside each class ---------------- */
-  var ORDER = ['t01', 't02', 't03', 't04', 't05',
-    't06', 't07', 't08', 't11', 't09', 't10',
-    't12', 't17', 't13', 't18', 't16', 't19', 't14', 't15',
+  // Slice 4 put the class 0 pack in among the class 0 steps; a save finds its step by id, so nobody moves.
+  var ORDER = ['t01', 't36', 't37', 't38', 't02', 't03', 't04', 't05',
+    't06', 't07', 't18', 't08', 't11', 't34', 't09', 't10',
+    't12', 't17', 't13', 't35', 't16', 't19', 't14', 't15',
     't20', 't22', 't25', 't23', 't24',
     't26', 't21', 't27', 't28', 't29',
     't30', 't31', 't32', 't33'];

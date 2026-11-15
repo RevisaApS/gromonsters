@@ -231,6 +231,14 @@ html.still .bt-xp{animation:bt-xpstill 1.4s linear both}
 .bt-stat-shield>svg{color:#a9eeff}
 .bt-stat b{font-family:var(--display);font-size:34px;line-height:1}
 .bt-stat-l{font-size:20px;color:var(--paper-dim);line-height:1.15}
+/* the result card: one mark per task of his, in order. A green tick = right by himself, a soft "?" = shown how */
+.bt-marks{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:420px;margin:8px 0 16px}
+.bt-mark{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid var(--ink);animation:pop-in .4s var(--spring) both;animation-delay:var(--d,0ms)}
+.bt-mark svg{width:28px;height:28px;display:block}
+.bt-mark.is-yes{background:#58e07a;color:#0b1430}
+.bt-mark.is-yes.is-super{background:var(--gold)}
+.bt-mark.is-help{background:#3a4a8c;color:#c9d3ff}
+.bt-mark.is-help b{font-size:26px;line-height:1}
 .bt-starrow{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;max-width:170px;min-height:40px;align-items:center}
 .bt-star{width:28px;height:28px;color:#2c3a74}
 .bt-star svg{width:100%;height:100%;display:block}
@@ -270,6 +278,8 @@ html.still .bt-xp{animation:bt-xpstill 1.4s linear both}
 .vs-row{--sz:min(54cqh,calc((92cqw - (var(--n) - 1) * 2cqw) / var(--n)));display:flex;gap:2cqw;align-items:center}
 .vs-it{width:var(--sz);height:var(--sz);flex:0 0 auto;display:flex;align-items:center;justify-content:center;border-radius:calc(var(--sz) * .22);
   background:rgba(255,255,255,.1);border:3px solid rgba(255,255,255,.25);font-size:calc(var(--sz) * .62);line-height:1}
+/* the same picture several times in one box: a neat group that stays inside it */
+.vs-it.is-group>svg{width:86%;height:86%;display:block;overflow:visible}
 .vs-it.num{font-family:var(--display);font-weight:700;font-size:calc(var(--sz) * .48)}
 .vs-it.num.l3,.vs-it.num.l4{font-size:calc(var(--sz) * .3)}
 .vs-it.is-gap,.vg-c.is-gap,.vm-io.is-gap{border:3px dashed #5df2b0;color:#5df2b0;background:rgba(93,242,176,.12);font-family:var(--display);font-weight:700;animation:glow-pulse 1.6s ease-in-out infinite}
@@ -313,6 +323,8 @@ html.still .bt-xp{animation:bt-xpstill 1.4s linear both}
 .orb.o-xl{width:100px;height:100px}.orb.o-xl .orb-v{font-size:36px}
 .orb.coin{background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.9) 0,rgba(255,255,255,0) 24%),radial-gradient(circle,#ffe58a 0,#ffc93c 52%,#d08a00 100%);
   box-shadow:inset 0 0 0 7px rgba(255,255,255,.28),inset 0 0 0 9px rgba(150,90,0,.35),0 6px 0 var(--ink),0 10px 14px rgba(0,0,0,.3)}
+/* Danish coins: 1, 2 and 5 kroner are silver, 10 and 20 are gold */
+.orb.coin.is-silver{background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.95) 0,rgba(255,255,255,0) 26%),radial-gradient(circle,#f1f4fa 0,#c9d1e0 55%,#8f9bb3 100%)}
 .orb-u{font-size:18px;font-family:var(--body);font-weight:800;margin-top:1px}
 .bd-tray.is-many{gap:8px;flex-wrap:nowrap}
 .bd-tray.is-many .orb{width:74px;height:74px}.bd-tray.is-many .orb .orb-v{font-size:32px}.bd-tray.is-many .orb-u{font-size:14px}
@@ -615,3 +627,230 @@ html.still .bt-dmg{animation-duration:1.25s;animation-timing-function:linear}
 .bt-dmg.is-mark svg{width:110px;height:110px}
 .bt-dmg.is-mark.is-yes{color:#58e07a;filter:drop-shadow(0 4px 0 #0b1430) drop-shadow(0 0 3px #0b1430) drop-shadow(0 0 16px rgba(88,224,122,.9))}
 .bt-dmg.is-mark.is-no{color:#ff7a6a;filter:drop-shadow(0 4px 0 #0b1430) drop-shadow(0 0 3px #0b1430) drop-shadow(0 0 16px rgba(255,122,106,.9))}
+
+/* ---------- the class 0 pack (slice 4): secret word, rhyme pieces, clap the beats, give berries, find shapes ---------- */
+.tk-secret .tk-ans,.tk-match .tk-ans,.tk-beats .tk-ans,.tk-give .tk-ans,.tk-shapes .tk-ans{flex-direction:row}
+/* a picture he can tap to hear its name */
+.pk-pic{position:relative;padding:8px;border:var(--outline);border-radius:var(--r-m);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#ffffff 0%,#e3e9ff 100%);box-shadow:inset 0 -5px 0 rgba(44,63,134,.18),0 6px 0 #101a40,0 10px 14px rgba(0,0,0,.3);transition:transform .12s var(--spring),box-shadow .2s}
+.pk-pic:active{transform:translateY(4px) scale(.97)}
+.pk-pic img.pk-img{width:88%;height:88%;object-fit:contain}
+.pk-pic span.pk-img{font-size:64px;line-height:1}
+.pk-pic.is-talk{animation:tk-talk .6s ease-out}
+.pk-ok{width:100px;height:100px;flex:0 0 100px}
+.pk-ok svg{width:56px;height:56px}
+.pk-ok.is-off{filter:grayscale(.75) brightness(.75);opacity:.7}
+.pk-ok.is-ready svg{animation:bt-nudge 1.4s ease-in-out infinite}
+
+/* secret word */
+.sw-wrap{display:flex;align-items:center;justify-content:center;gap:22px;height:100%}
+.sw-cols{display:flex;gap:12px}
+.sw-col{display:flex;flex-direction:column;align-items:center;gap:10px}
+.sw-pic{width:108px;height:108px}
+.sw-pic.is-now{box-shadow:0 0 0 6px var(--pow,#45c8ff),0 6px 0 #101a40,0 0 26px var(--pow,#45c8ff)}
+.sp-slot.sw-slot{width:80px;height:80px;font-size:48px}
+.sw-tray{display:grid;grid-template-columns:repeat(4,82px);gap:12px}
+.sw-chest{position:relative;width:150px;height:150px;flex:0 0 150px}
+.sw-chest svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.cz-lid{transform-box:view-box;transform-origin:14px 70px;transition:transform .45s var(--spring)}
+.sw-chest.is-open .cz-lid{transform:rotate(-32deg) translate(-8px,-6px)}
+.sw-prize{position:absolute;left:50%;top:30%;width:100px;height:100px;opacity:0;transform:translate(-50%,10%) scale(.2);transition:transform .5s var(--spring),opacity .3s;pointer-events:none}
+.sw-prize img,.sw-prize span{width:100%;height:100%;font-size:80px;line-height:1}
+.sw-chest.is-open .sw-prize{opacity:1;transform:translate(-50%,-62%) scale(1)}
+.tk.is-right .sw-slot.is-full{background:linear-gradient(180deg,#d8ffe2,#8cf5a2)}
+
+/* rhyme pieces: a picture with a socket, pieces with a tab */
+/* rhyme pieces (Steve's play notes 4): the picture and the piece are drawn at one scale, 1 px per unit of their 200-unit
+   drawings, so the knob fills the notch and the two edge lines become one. The joined piece sits at x 144 (taskui PZ). */
+.rp-wrap{display:flex;align-items:center;justify-content:center;gap:34px;height:100%}
+.rp-spot{position:relative;flex:none;width:392px;height:200px}
+.rp-target,.rp-piece{background:none;border:0;box-shadow:none;padding:0}
+.rp-target:active{transform:none}
+.pz-edge,.pz-ghost{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.pz-edge{filter:drop-shadow(0 6px 0 #101a40) drop-shadow(0 10px 10px rgba(0,0,0,.3))}
+.pz-edge path{fill:#f4f8ff;stroke:var(--ink);stroke-width:6;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.pz-ghost path{fill:rgba(255,255,255,.05);stroke:rgba(255,255,255,.35);stroke-width:4;stroke-dasharray:12 10;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.rp-target{position:absolute;left:0;top:0;width:200px;height:200px;z-index:1}
+.rp-target img.pk-img{position:absolute;left:9%;top:12%;width:68%;height:76%;object-fit:contain}
+.rp-dock{position:absolute;left:144px;top:0;width:248px;height:200px;pointer-events:none;transition:opacity .2s}
+.rp-spot.is-joined .rp-dock,.rp-spot.is-joining .rp-dock{opacity:0}
+.rp-tray{display:flex;gap:16px}
+.rp-piece{position:relative;width:155px;height:125px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.rp-piece img.pk-img{position:absolute;left:29%;top:12%;width:62%;height:76%;object-fit:contain}
+.rp-piece.is-drag{z-index:20;cursor:grabbing;transition:none}
+.rp-piece.is-in{visibility:hidden}
+.rp-piece.is-sol .pz-edge path{stroke:#5df2b0}
+.rp-piece.is-sol{animation:tk-cellsol 1.3s ease-in-out infinite}
+.rp-piece.is-docked{position:absolute;left:144px;top:0;width:248px;height:200px;z-index:2;cursor:default;will-change:transform}
+.rp-piece.is-nofit .pz-edge{animation:rp-nofit .34s ease-in-out}
+@keyframes rp-nofit{0%,100%{transform:none}25%{transform:translateX(-8px) rotate(-3deg)}75%{transform:translateX(8px) rotate(3deg)}}
+/* the click: one small bounce of the joined pair */
+.rp-spot.is-click{animation:rp-click .34s var(--spring)}
+@keyframes rp-click{0%{transform:none}35%{transform:scale(1.05,.96)}70%{transform:scale(.99,1.02)}100%{transform:none}}
+.rp-spot.is-joined .pz-edge{filter:drop-shadow(0 6px 0 #101a40) drop-shadow(0 0 14px rgba(93,242,176,.45))}
+/* the wild one's thinking: the picture it is looking at now */
+.rp-target.is-think .pz-edge path,.rp-piece.is-think .pz-edge path{stroke:var(--gold);stroke-width:9}
+.tk.is-right .rp-spot .pz-edge path{stroke:var(--good)}
+
+/* clap the beats */
+.bb-wrap{display:flex;align-items:center;justify-content:center;gap:34px;height:100%}
+.bb-pic{width:200px;height:200px}
+.bb-drum{width:214px;height:214px;padding:0;border-radius:50%;cursor:pointer;border:4px solid rgba(255,255,255,.25);touch-action:manipulation;
+  background:radial-gradient(circle,rgba(255,255,255,.16),rgba(255,255,255,.03) 70%);display:flex;align-items:center;justify-content:center}
+.bb-drum img.bb-drum-img{width:84%;height:84%;object-fit:contain}
+.bb-drum span.bb-drum-img{font-size:130px;line-height:1}
+.bb-drum.is-hit{animation:bb-hit .22s ease-out}
+@keyframes bb-hit{40%{transform:scale(.9)}100%{transform:scale(1)}}
+.bb-side{display:flex;flex-direction:column;align-items:center;gap:16px}
+.bb-dots{display:grid;grid-template-columns:repeat(3,44px);gap:12px}
+.bb-dot{width:44px;height:44px;border-radius:50%;border:4px dashed rgba(255,255,255,.28);transition:transform .14s var(--spring),background .12s}
+.bb-dot.is-on{background:var(--pow,#45c8ff);border:4px solid var(--ink);transform:scale(1.08)}
+.bb-dot.is-sol{border:4px solid #5df2b0;box-shadow:0 0 14px rgba(93,242,176,.7)}
+.bb-again{width:72px;height:72px;padding:0}
+.bb-again svg{width:36px;height:36px}
+.bb-again.is-off{opacity:.35}
+.tk.is-right .bb-dot.is-on{background:var(--good)}
+
+/* give exactly that many */
+.gv-wrap{display:flex;align-items:center;justify-content:center;gap:30px;height:100%}
+.gv-tray{display:grid;grid-template-columns:repeat(5,84px);gap:10px}
+.gv-berry{position:relative;width:84px;height:84px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  background:rgba(255,255,255,.06);border:3px dashed rgba(255,255,255,.16);touch-action:none;user-select:none;-webkit-user-select:none}
+.gv-berry img.gv-img{width:80%;height:80%;object-fit:contain}
+.gv-berry span.gv-img{font-size:52px;line-height:1}
+.gv-berry.is-drag{z-index:20;transition:none;border-color:transparent;background:none}
+.gv-berry.is-used{visibility:hidden}
+.gv-berry.is-sol{border:3px solid #5df2b0;box-shadow:0 0 16px rgba(93,242,176,.7)}
+.gv-plate{width:390px;height:232px;flex:0 0 390px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:5px solid var(--ink);
+  background:radial-gradient(ellipse at 50% 50%,#fdf7e8 0 54%,#e8dcc0 55% 60%,#fdf7e8 61%);box-shadow:0 8px 0 #101a40,0 12px 18px rgba(0,0,0,.35)}
+.gv-heap{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:2px 4px;width:340px}
+.gv-heap .gv-berry{width:64px;height:64px;border:0;background:none;touch-action:manipulation;animation:pop-in .25s var(--spring)}
+.tk.is-right .gv-plate{border-color:var(--good);box-shadow:0 8px 0 #101a40,0 0 30px rgba(88,224,122,.8)}
+
+/* find the shape */
+.sh-wrap{display:flex;align-items:center;justify-content:center;gap:24px;height:100%}
+.sh-grid{display:grid;grid-template-columns:repeat(4,190px);grid-template-rows:repeat(2,118px);gap:12px}
+.sh-cell{padding:4px;border-radius:22px;cursor:pointer;background:rgba(255,255,255,.06);border:3px solid rgba(255,255,255,.14);transition:transform .12s var(--spring),background .12s}
+.sh-cell:active{transform:scale(.96)}
+.sh-cell .sh-svg{width:100%;height:100%;display:block;overflow:visible}
+.sh-cell.is-on{background:rgba(93,242,176,.16);border:5px solid #5df2b0;box-shadow:0 0 22px rgba(93,242,176,.6)}
+.sh-cell.is-sol{animation:tk-cellsol 1.3s ease-in-out infinite;border:4px dashed #5df2b0}
+.tk.is-right .sh-cell.is-on{border-color:var(--good)}
+
+/* visuals: tally strokes and a number he only hears */
+.vh-btn{width:min(74cqh,74cqw);height:min(74cqh,74cqw);padding:18%;border-radius:50%;cursor:pointer;color:var(--ink);border:var(--outline);
+  background:radial-gradient(circle at 34% 28%,#fff,#d8f1ff 60%,#9fd8ff);box-shadow:0 6px 0 var(--ink),0 0 26px rgba(159,216,255,.5)}
+.vh-btn svg{width:100%;height:100%}
+.vh-btn.is-talk svg{animation:tk-talk .6s ease-out}
+.still .pk-ok.is-ready svg,.still .rp-piece.is-sol,.still .sh-cell.is-sol{animation:none!important}
+
+/* ---------- Natur og teknik (slice 5): guess then test, two strings, arrow steps ---------- */
+.tk-test .tk-ans,.tk-strings .tk-ans,.tk-steps .tk-ans{flex-direction:row}
+.nt-wrap{display:flex;align-items:center;justify-content:center;gap:44px;height:100%;width:100%}
+.nt-stage{position:relative;height:100%}
+.nt-float .nt-stage{aspect-ratio:520/300}
+.nt-svg{width:100%;height:100%;display:block;overflow:visible}
+.nt-thingbtn{position:absolute;left:36%;top:0;width:28%;height:44%;padding:0;background:none;border:0;border-radius:24px;cursor:pointer}
+.nt-stage.is-talk .nt-thing{animation:tk-talk .6s ease-out;transform-box:fill-box;transform-origin:center}
+.nt-choices{display:flex;gap:28px}
+.nt-pick{width:200px;height:200px;padding:14px;border:var(--outline);border-radius:var(--r-m);cursor:pointer;
+  background:linear-gradient(180deg,#ffffff 0%,#e3e9ff 100%);box-shadow:inset 0 -5px 0 rgba(44,63,134,.18),0 6px 0 #101a40,0 10px 14px rgba(0,0,0,.3);transition:transform .12s var(--spring),opacity .3s}
+.nt-pick:active{transform:translateY(4px) scale(.97)}
+.nt-pick svg{width:100%;height:100%;display:block}
+.nt-pick.is-picked{box-shadow:0 0 0 7px var(--pow,#a6e34f),0 6px 0 #101a40,0 0 26px var(--pow,#a6e34f)}
+.nt-pick.is-sol{animation:tk-cellsol 1.3s ease-in-out infinite;box-shadow:0 0 0 6px #5df2b0,0 6px 0 #101a40}
+.tk.is-testing .nt-pick:not(.is-picked),.tk.is-shown .nt-pick:not(.is-picked){opacity:.4}
+.tk.is-right .nt-pick.is-picked{box-shadow:0 0 0 7px var(--good),0 0 30px rgba(88,224,122,.8)}
+.nt-ramps{width:100%}
+.nt-lanebg{fill:rgba(255,255,255,.05);stroke:rgba(255,255,255,.14);stroke-width:3}
+.nt-lanebtn{position:absolute;left:0;width:100%;height:50%;padding:0;background:none;border:4px solid transparent;border-radius:22px;cursor:pointer}
+.nt-lanebtn.is-picked{border-color:var(--pow,#a6e34f);box-shadow:0 0 22px var(--pow,#a6e34f)}
+.nt-lanebtn.is-sol{border:4px dashed #5df2b0;animation:tk-cellsol 1.3s ease-in-out infinite}
+.tk.is-right .nt-lanebtn.is-picked{border-color:var(--good)}
+.nt-ball.is-far{filter:drop-shadow(0 0 8px #5df2b0) drop-shadow(0 0 4px #5df2b0)}
+/* two strings to pluck */
+.sg-wrap{display:flex;flex-direction:column;justify-content:center;gap:16px;height:100%;width:100%}
+.sg-row{display:flex;align-items:center;justify-content:center;gap:22px}
+.sg-str{width:770px;height:118px;padding:0;background:rgba(255,255,255,.04);border:3px solid rgba(255,255,255,.14);border-radius:22px;cursor:pointer;touch-action:manipulation}
+.sg-str .sg-svg{width:100%;height:100%;display:block}
+.sg-pick{width:104px;height:104px;flex:0 0 104px}
+.sg-pick svg{width:58px;height:58px}
+.sg-row.is-picked .sg-pick{box-shadow:0 0 0 7px var(--pow,#a6e34f),0 7px 0 #14702f}
+.sg-row.is-sol .sg-pick,.sg-row.is-sol .sg-str{animation:tk-cellsol 1.3s ease-in-out infinite}
+.sg-row.is-sol .sg-str{border:4px dashed #5df2b0}
+.sg-wrap.is-still{gap:10px;padding:8px}
+.sg-wrap.is-still .sg-str{width:100%;height:auto;aspect-ratio:700/110;cursor:default}
+/* arrow steps on a grid */
+.st-wrap{display:flex;align-items:center;justify-content:center;gap:28px;height:100%;width:100%}
+.st-board{height:100%;aspect-ratio:calc(var(--w) / var(--h));flex:none}
+.st-svg{width:100%;height:100%;display:block;border-radius:16px;overflow:visible}
+.st-side{display:flex;flex-direction:column;gap:18px;align-items:flex-start}
+.st-row{display:flex;gap:8px}
+.st-slot{width:72px;height:72px;padding:0;border-radius:16px;border:3px dashed rgba(255,255,255,.3);background:rgba(255,255,255,.05);display:grid;place-items:center;cursor:pointer;color:#fff}
+.st-slot.is-full{border:3px solid var(--ink);background:linear-gradient(180deg,#4a63c4 0%,#2c3f86 100%);box-shadow:0 4px 0 #101a40}
+.st-slot.is-ghost{opacity:.5;color:#5df2b0;border-color:#5df2b0}
+.st-slot.is-sel{box-shadow:0 0 0 5px #ffd34d,0 4px 0 #101a40}
+.st-slot.is-new{background:linear-gradient(180deg,#5ad07a 0%,#22a94b 100%)}
+.st-slot.is-sol{border:4px solid #5df2b0;animation:tk-cellsol 1.3s ease-in-out infinite}
+.st-arr{display:block;width:46px;height:46px}
+.st-arr svg{width:100%;height:100%;display:block}
+.st-pad{display:flex;gap:12px;align-items:center}
+.st-key{width:88px;height:88px;padding:0}
+.st-key .st-arr{width:56px;height:56px}
+.st-key.is-off{opacity:.45}
+.st-key.is-sol{box-shadow:0 0 0 6px #5df2b0,0 7px 0 #101a40;animation:tk-cellsol 1.3s ease-in-out infinite}
+.st-go{width:104px;height:104px;margin-left:16px}
+.st-go svg{width:58px;height:58px}
+.st-go.is-ready svg{animation:bt-nudge 1.4s ease-in-out infinite}
+.tk.is-right .st-slot.is-full{background:linear-gradient(180deg,#5ad07a 0%,#22a94b 100%)}
+.vis-lab{flex-direction:column;gap:3cqh;padding:2cqh}
+.vis-lab .st-board{height:72cqh}
+.vis-lab .st-row.is-still{gap:5px}
+.vis-lab .st-row.is-still .st-slot{width:min(12cqh,9cqw);height:min(12cqh,9cqw);cursor:default}
+.vis-lab .st-row.is-still .st-arr{width:70%;height:70%}
+.vis-emoji.is-talker{cursor:pointer}
+.vis-emoji.is-talk .ve-e{animation:tk-talk .6s ease-out}
+.still .nt-pick.is-sol,.still .nt-lanebtn.is-sol,.still .sg-row.is-sol .sg-pick,.still .sg-row.is-sol .sg-str,.still .st-slot.is-sol,.still .st-key.is-sol,.still .st-go.is-ready svg{animation:none!important}
+
+/* Steve's play notes 4: the first battle can be lost. His last Gromonster faints where it stands, and the card of a lost
+   battle has a clear way to try again */
+.bt-p.is-faint .bt-move{transform:translateY(46px) rotate(-16deg);filter:grayscale(.85) brightness(.7);transition:transform .9s var(--out),filter .9s}
+.bt-card-btns{display:flex;gap:16px;align-items:center;justify-content:center;flex-wrap:wrap}
+.bt-again{display:inline-flex;align-items:center;gap:10px;min-height:84px;padding:0 26px;font-size:28px}
+.bt-again svg{width:40px;height:40px}
+.bt-again.bt-done svg{width:48px;height:48px}
+
+/* ---- the wild one thinks, step by step (Steve's play notes 4): what it looks at now lights up on the task ---- */
+.bt-watch-next{display:none;width:84px;height:84px}
+.bt-watch-next svg{width:46px;height:46px;animation:bt-nudge 1.4s ease-in-out infinite}
+.bt.is-thinkturn .bt-idk{display:none}
+.bt.is-thinkturn .bt-watch-next{display:inline-flex}
+.tk.is-thinking{opacity:1}
+.tk .is-think{filter:drop-shadow(0 0 4px rgba(255,211,77,1)) drop-shadow(0 0 16px rgba(255,211,77,.85));z-index:3}
+.tk button.is-think,.tk .vs-it.is-think,.tk .vg-c.is-think,.tk .ch-card.is-think,.tk .sp-slot.is-think,.tk .tk-vis.is-think,.tk .bb-pic.is-think,.tk .bb-drum.is-think,
+.tk .gv-berry.is-think,.tk .gv-plate.is-think,.tk .sw-chest.is-think,.tk .nt-stage.is-think,.tk .sg-str.is-think,.tk .st-row.is-think,.tk .nt-pick.is-think,.tk .nt-lanebtn.is-think{
+  transform:scale(1.07);transition:transform .2s var(--spring),filter .2s}
+.tk .ch-card.is-think,.tk .sp-slot.is-think,.tk .sw-slot.is-think,.tk .vs-it.is-think,.tk .vg-c.is-think,.tk .sh-cell.is-think,.tk .nt-pick.is-think{box-shadow:0 0 0 5px var(--gold),0 0 26px rgba(255,211,77,.75)}
+.tk svg .is-think:not(.vc-m):not(.vc-h){transform-box:fill-box;transform-origin:center;transform:scale(1.22);transition:transform .2s var(--spring)}
+/* a clock hand keeps its turn (its transform attribute): it only changes colour */
+.tk .vc-m.is-think,.tk .vc-h.is-think{stroke:#ff8a00}
+.tk .vd-off.is-think{stroke:var(--gold);stroke-dasharray:none;fill:rgba(255,211,77,.25)}
+.tk .bb-drum.is-think{animation:bb-hit .25s var(--spring)}
+.tk .tk-vis.is-thinkvis{flex-direction:column;gap:6px}
+.tk-thinktext{font-family:var(--display);font-weight:700;font-size:28px;line-height:1.15;color:#fff;text-align:center;text-shadow:0 2px 0 var(--ink);max-width:100%;padding:0 8px}
+.bt-prompt.is-think{color:var(--gold)}
+.still .bt-watch-next svg{animation:none!important}
+/* while it thinks, only what it looks at now is lit (not the "next picture" ring of his own turn) */
+.tk.is-thinking .sw-pic.is-now:not(.is-think){box-shadow:0 6px 0 #101a40}
+.tk .sw-pic.is-think{box-shadow:0 0 0 6px var(--gold),0 6px 0 #101a40,0 0 26px rgba(255,211,77,.8)}
+
+/* today's friend on the card after a win (play notes 4): the mark in the card's top corner */
+.bt-card{position:relative}
+.bt-today.tm{position:absolute;right:34px;top:30px;--tm:108px}
+.bt-card-pic{position:relative}
+.bt-card-pic.is-bye img{opacity:.7;filter:saturate(.5) brightness(.85)}
+.bt-bye{position:absolute;right:-6px;top:14px;width:64px;height:64px;animation:bt-wave 1.2s ease-in-out infinite;transform-origin:70% 90%}
+.bt-bye svg{width:100%;height:100%}
+@keyframes bt-wave{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(14deg)}}
+.still .bt-bye{animation:none}
+.bt-again.bt-done{font-size:44px}

@@ -125,8 +125,9 @@ window.G = window.G || {};
     var pd = S.pads[i]; if (!pd || !pd.id) return;
     var k = G.KRAFT0 + G.KRAFT_STEP * Math.max(0, xp | 0);
     pd.lvl.innerHTML = G.icon('bolt') + '<b>' + k + '</b>';
-    pd.slot.classList.toggle('big', k >= G.GROW_KRAFT);
-    pd.plate.classList.toggle('grown', k >= G.GROW_KRAFT);
+    var grown = G.levelAt(pd.id, xp) >= 3; // by power, or a form it already had
+    pd.slot.classList.toggle('big', grown);
+    pd.plate.classList.toggle('grown', grown);
   }
   // o: {xp, pic} to show a state from before a celebration
   function mountPad(i, id, o) {
@@ -183,9 +184,9 @@ window.G = window.G || {};
   // ---------- the Gromonster card (camp and Gromodex) ----------
   // the next form mark, as power: grown, then the next form (only some have one)
   function nextMark(baseId) {
-    var c = G.creatures[baseId] || {}, k = G.kraftOf(baseId), name = c.name;
-    if (k < G.GROW_KRAFT) return { at: G.GROW_KRAFT, from: G.KRAFT0, text: G.t('card.grows', { n: G.GROW_KRAFT, name: name }) };
-    if (c.evolvesTo && k < G.EVOLVE_KRAFT) return { at: G.EVOLVE_KRAFT, from: G.GROW_KRAFT, text: G.t('card.becomes', { n: G.EVOLVE_KRAFT, name: name, next: G.creatures[c.evolvesTo].name }) };
+    var c = G.creatures[baseId] || {}, k = G.kraftOf(baseId), name = c.name, lv = G.levelFor(baseId);
+    if (lv < 3 && k < G.GROW_KRAFT) return { at: G.GROW_KRAFT, from: G.KRAFT0, text: G.t('card.grows', { n: G.GROW_KRAFT, name: name }) };
+    if (c.evolvesTo && lv < 5 && k < G.EVOLVE_KRAFT) return { at: G.EVOLVE_KRAFT, from: Math.min(k, G.GROW_KRAFT), text: G.t('card.becomes', { n: G.EVOLVE_KRAFT, name: name, next: G.creatures[c.evolvesTo].name }) };
     return null;
   }
   /* G.GromCard.open(root, baseId, opts) -> {close()}
@@ -196,7 +197,7 @@ window.G = window.G || {};
       var p = G.profile, met = !!opts.met, picId = met ? baseId : G.formId(p, baseId), c = G.creatures[picId] || G.creatures[baseId];
       var kr = G.kraftOf(baseId);
       var veil = G.el('div', 'ov-veil'); root.appendChild(veil);
-      var card = G.el('div', 'gcard panel pop-in' + (!met && kr >= G.GROW_KRAFT ? ' grown' : '') + (met ? ' met' : ''));
+      var card = G.el('div', 'gcard panel pop-in' + (!met && G.isGrown(baseId) ? ' grown' : '') + (met ? ' met' : ''));
       var host = G.el('div', 'gc-host'); card.appendChild(host);
       var info = G.el('div', 'gc-info');
       info.appendChild(G.el('div', 'gc-name title', c.name));
@@ -310,13 +311,12 @@ window.G = window.G || {};
   }
 
   // ---------- today's friend ----------
-  // one round slot: empty, glowing when he has beaten someone he can pick, or today's friend with a tick
+  // one round slot, today's friend mark (G.todayMark, the same on the map and the battle's card): empty, glowing gold when
+  // he has beaten someone he can pick, or today's friend with a moon (a new one tomorrow)
   function todaySlot() {
-    var box = S.sight, f = G.friendToday(), can = G.friendChoices().length > 0;
-    box.innerHTML = '';
-    box.className = 'today-slot' + (f ? ' done' : can ? ' ready' : '');
-    if (f) { box.appendChild(G.picture(G.formId(G.profile, f))); box.appendChild(G.el('span', 'ts-tick', G.icon('check'))); }
-    else box.appendChild(G.el('span', 'ts-ico', G.icon(can ? 'paw' : 'plus')));
+    var box = S.sight;
+    box.className = 'today-slot';
+    G.todayMark(box, G.todayState());
   }
   function todayTap() {
     if (S.root.classList.contains('celebrating') || S.overlay) return;
