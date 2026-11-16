@@ -150,7 +150,7 @@
   // guess, then test: the thing (or each ramp) is looked at, then its guess and the test's end
   K.test = function (t) {
     var ts = t.test, out = [];
-    if (ts.scene === 'float') {
+    if (ts.scene === 'float' || ts.scene === 'magnet') {
       out.push(B({ name: 'the thing and its name', say: (ts.says || [])[0], light: [act('[data-act="thing"]'), act('.nt-stage')] }));
       out.push(B({ name: 'its guess', say: null, pace: 'quiet', light: [act('[data-act="guess-' + ts.correct + '"]')] }));
     } else {

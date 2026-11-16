@@ -249,7 +249,7 @@
     // the shapes on show are the question (their places, sizes, turns and colours), and the kind to find
     else if (t.ui === 'shapes' && t.shapes) a = t.shapes.want + ':' + t.shapes.items.map(function (x) { return x.s.charAt(0) + x.z + ',' + x.r + ',' + x.c; }).join(';');
     // Natur og teknik: the thing or the two ramps, the two strings and what is asked, the grid (and a row laid already)
-    else if (t.ui === 'test' && t.test) a = t.test.scene + ':' + (t.test.scene === 'float' ? t.test.thing : t.test.angles.join('-') + ':' + t.test.ball);
+    else if (t.ui === 'test' && t.test) a = t.test.scene + ':' + (t.test.scene === 'ramp' ? t.test.angles.join('-') + ':' + t.test.ball : t.test.thing);
     else if (t.ui === 'strings' && t.strings) a = t.strings.lens.join('-') + ':' + t.strings.ask;
     else if (t.ui === 'steps' && t.steps) { var sg = t.steps; a = sg.w + 'x' + sg.h + ':' + sg.start.join(',') + '>' + sg.goal.join(',') + ':' + sg.stones.map(function (x) { return x.join(','); }).join(';') + ':' + (sg.row ? sg.row.join('') : ''); }
     return t.ui + '|' + (t.ui === 'spell' ? '' : t.prompt) + '|' + JSON.stringify(t.visual || null) + '|' + a;
@@ -412,6 +412,9 @@
         if (!found || (c.intro && ((st.p[power].c || {})[c.s] || 0) > 0) || (c.intro === 1 && found.index <= st.p[power].si)) { st.cb.splice(i, 1); i--; continue; }
         var t = c.kind === 'sib' ? fresh1(power, found.step, c.id, isEasy(power, found.step)) : build(power, found.step, c.k);
         if (!t) { st.cb.splice(i, 1); i--; continue; }
+        // a saved miss whose params now build another question (a step's list of things grew or changed since the
+        // save, slice 5b) is dropped: a different thing must never count as the miss fixed
+        if (c.kind === 'same' && c.id && t.id !== c.id) { st.cb.splice(i, 1); i--; continue; }
         if (recent(t)) continue;    // shown too recently: wait
         st.cb.splice(i, 1);
         if (!c.intro) t.cb = c.kind;
@@ -921,7 +924,7 @@
     return true;
   }
   var SHAPES = ['circle', 'triangle', 'square'];
-  var LABS = ['float', 'ramp', 'strings', 'grid'];
+  var LABS = ['float', 'magnet', 'ramp', 'strings', 'grid'];
   function strings(task) {
     var out = [task.prompt, task.say];
     if (task.intro) out.push(task.intro);
@@ -1293,6 +1296,15 @@
         if (new RegExp(fl ? 'flyder' : 'synker').test(task.how[0].text) === false) return 'float: the how says the wrong thing';
         return true;
       }
+      case 'magnet': {
+        var tm = task.test, pl = NATUR_MAGNET[tm.thing];
+        if (pl == null) return 'magnet: ' + tm.thing + ' is not in the fact list';
+        if (tm.correct !== (pl ? 0 : 1)) return 'magnet: ' + tm.thing + (pl ? ' is pulled' : ' is not pulled');
+        var hm = task.how[0].visual;
+        if (!hm || hm.thing !== tm.thing || hm.pulls !== pl) return 'magnet: the how shows something else';
+        if (/ikke/.test(task.how[0].text) === pl) return 'magnet: the how says the wrong thing';
+        return true;
+      }
       case 'ramp': {
         var ta = task.test.angles;
         if (!Array.isArray(ta) || ta.length !== 2 || Math.abs(ta[0] - ta[1]) < 12) return 'ramp: the two ramps must differ clearly';
@@ -1329,8 +1341,14 @@
     }
   }
   // the fact list of slice-5.md, written out again for verify: floats (true) or sinks, and legs on a checked picture
-  var NATUR_FLOATS = { '🍎': true, '⛵': true, '🥄': false, '🔑': false, stone: false };
-  var NATUR_LEGS = { '🐶': 4, '🐦': 2, '🦆': 2, '🦉': 2, '🦜': 2, '🦅': 2, '🐌': 0, '🐟': 0 };
+  var NATUR_FLOATS = { '🍎': true, '⛵': true, 'nat:feather': true, 'nat:leaf': true, 'nat:stick': true, 'nat:beach-ball': true,
+    '🥄': false, '🔑': false, stone: false, 'nat:nail': false, 'nat:screw': false, 'nat:coin-gold': false, 'nat:scissors': false };
+  // the magnet (slice-5b.md): it pulls iron and steel; no key and no coin
+  var NATUR_MAGNET = { 'nat:nail': true, 'nat:screw': true, 'nat:paper-clip': true, 'nat:scissors': true,
+    'nat:feather': false, 'nat:leaf': false, 'nat:stick': false, 'nat:beach-ball': false, '✏️': false, '🍎': false, stone: false, '📖': false };
+  // legs counted by eye on each slice 5b cut-out
+  var NATUR_LEGS = { 'nat:spider': 8, 'nat:ant-6legs': 6, 'nat:ladybird-6legs': 6, 'nat:beetle': 6, 'nat:bee-6legs': 6,
+    'nat:grasshopper': 6, 'nat:cat-4legs': 4, 'nat:hen': 2, 'nat:worm': 0 };
   function buildReach(task) {
     var vals = tileVals(task), b = task.build;
     if (b.op === 'product') {
@@ -1456,8 +1474,8 @@
       // Natur og teknik: two answers in the guess-then-test games and the strings, a small grid in the arrow games
       if (task.ui === 'test') {
         var tst = task.test;
-        if (['float', 'ramp'].indexOf(tst.scene) < 0 || [0, 1].indexOf(tst.correct) < 0 || !Array.isArray(tst.says)) return 'test shape';
-        if (tst.scene === 'float' && tst.says.length !== 1) return 'test: the thing says its name';
+        if (['float', 'magnet', 'ramp'].indexOf(tst.scene) < 0 || [0, 1].indexOf(tst.correct) < 0 || !Array.isArray(tst.says)) return 'test shape';
+        if ((tst.scene === 'float' || tst.scene === 'magnet') && tst.says.length !== 1) return 'test: the thing says its name';
       }
       if (task.ui === 'strings') {
         var sr2 = task.strings;

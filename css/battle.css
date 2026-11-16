@@ -749,6 +749,8 @@ html.still .bt-dmg{animation-duration:1.25s;animation-timing-function:linear}
 .nt-wrap{display:flex;align-items:center;justify-content:center;gap:44px;height:100%;width:100%}
 .nt-stage{position:relative;height:100%}
 .nt-float .nt-stage{aspect-ratio:520/300}
+.nt-magnet .nt-stage{aspect-ratio:520/300}
+.nt-magnet .nt-thingbtn{top:auto;bottom:6%;height:42%}
 .nt-svg{width:100%;height:100%;display:block;overflow:visible}
 .nt-thingbtn{position:absolute;left:36%;top:0;width:28%;height:44%;padding:0;background:none;border:0;border-radius:24px;cursor:pointer}
 .nt-stage.is-talk .nt-thing{animation:tk-talk .6s ease-out;transform-box:fill-box;transform-origin:center}

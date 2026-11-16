@@ -1,16 +1,17 @@
-/* Content: natur (Natur og teknik, slice 5). A Danish game only, like Engelsk. Classes 0 to 2; an older child lands
-   on the last step. Nothing to read: one short spoken instruction, pictures that say their name, picture buttons.
-   The facts are only the clear cases in ../../slice-5.md ("The facts must be right"), and only things the game has a
-   picture for (assets/pics, src/data/pics.js). Left out for want of a picture: leaf, stick, feather, cork, coin and nail
-   (float or sink), every thing the magnet pulls (nail, screw, paper clip, scissors: so the magnet step is left out),
-   spider and worm. Left out after looking at the picture: the ball (it could be a marble or a solid rubber ball, which
-   sink), the ant, bee and ladybird (fewer than six legs show), the butterfly (no legs show) and the cat (three paws
-   show). The stone may be drawn in code (slice-5.md, Art).
-   Steps (ids follow the numbers in slice-5.md; n02, the magnet, waits for pictures):
+/* Content: natur (Natur og teknik, slice 5, pictures and the magnet in slice 5b). A Danish game only, like Engelsk.
+   Classes 0 to 2; an older child lands on the last step. Nothing to read: one short spoken instruction, pictures that
+   say their name, picture buttons. The facts are only the clear cases in ../../slice-5.md ("The facts must be right")
+   and ../../slice-5b.md, and only things the game has a picture for (assets/pics, src/data/pics.js). The 18 pictures of
+   slice 5b are keyed 'nat:<name>' in src/data/pics.js (tools/cut_natur.py). Left out on purpose: the paper clip in
+   floats or sinks (it can rest on the water's skin), the key and the coin in the magnet game (many are not iron), the
+   old ball picture (it could be a marble). The legs game uses only the nine slice 5b animals, each counted by eye.
+   The stone is drawn in code (slice-5.md, Art), and so is the magnet.
+   Steps (ids follow the numbers in slice-5.md):
      n01 Flyder eller synker (class 0)   ui 'test', scene 'float': he guesses, then the thing drops into the tub
      n04 Hvor mange ben (class 0)        ui 'choice': 0, 2, 4, 6 or 8
      n06 Kort vej (class 0)              ui 'steps': two to four arrow steps, at most one turn
      n05 Lys eller dyb tone (class 1)    ui 'strings': pluck both, pick the light (or the deep) one
+     n02 Magneten (class 1)              ui 'test', scene 'magnet': he guesses, then the magnet comes down
      n07 Uden om stenene (class 1)       ui 'steps': four to six steps, stones in the way
      n03 Rampen (class 2)                ui 'test', scene 'ramp': which ball rolls longest; then both roll
      n08 Find den forkerte pil (class 2) ui 'steps' with a row laid already: one arrow is wrong
@@ -34,20 +35,46 @@
   var FLOAT = [
     ['🍎', 'Æble.', 'Æblet flyder.', true],
     ['⛵', 'Båd.', 'Båden flyder.', true],
+    ['nat:feather', 'Fjer.', 'Fjeren flyder.', true],
+    ['nat:leaf', 'Blad.', 'Bladet flyder.', true],
+    ['nat:stick', 'Pind.', 'Pinden flyder.', true],
+    ['nat:beach-ball', 'Badebold.', 'Badebolden flyder.', true],
     ['🥄', 'Ske.', 'Skeen synker.', false],
     ['🔑', 'Nøgle.', 'Nøglen synker.', false],
-    ['stone', 'Sten.', 'Stenen synker.', false]
+    ['stone', 'Sten.', 'Stenen synker.', false],
+    ['nat:nail', 'Søm.', 'Sømmet synker.', false],
+    ['nat:screw', 'Skrue.', 'Skruen synker.', false],
+    ['nat:coin-gold', 'Mønt.', 'Mønten synker.', false],
+    ['nat:scissors', 'Saks.', 'Saksen synker.', false]
   ];
-  // [emoji, its name on a tap, legs, the how sentence]. Each picture was looked at: the legs show and can be counted.
+  // [picture, its name on a tap, the how sentence, the magnet pulls it] (slice-5b.md): iron and steel things, and things
+  // with no iron in them. No key and no coin.
+  var MAGNET = [
+    ['nat:nail', 'Søm.', 'Magneten trækker i sømmet.', true],
+    ['nat:screw', 'Skrue.', 'Magneten trækker i skruen.', true],
+    ['nat:paper-clip', 'Papirclips.', 'Magneten trækker i papirclipsen.', true],
+    ['nat:scissors', 'Saks.', 'Magneten trækker i saksen.', true],
+    ['nat:feather', 'Fjer.', 'Magneten trækker ikke i fjeren.', false],
+    ['nat:leaf', 'Blad.', 'Magneten trækker ikke i bladet.', false],
+    ['nat:stick', 'Pind.', 'Magneten trækker ikke i pinden.', false],
+    ['nat:beach-ball', 'Badebold.', 'Magneten trækker ikke i badebolden.', false],
+    ['✏️', 'Blyant.', 'Magneten trækker ikke i blyanten.', false],
+    ['🍎', 'Æble.', 'Magneten trækker ikke i æblet.', false],
+    ['stone', 'Sten.', 'Magneten trækker ikke i stenen.', false],
+    ['📖', 'Bog.', 'Magneten trækker ikke i bogen.', false]
+  ];
+  // [picture, its name on a tap, legs, the how sentence]. The nine slice 5b animals; the legs of each were counted by
+  // eye on the cut-out (game/README.md lists the counts).
   var LEGS = [
-    ['🐶', 'Hund.', 4, 'Hunden har 4 ben.'],
-    ['🐦', 'Fugl.', 2, 'Fuglen har 2 ben.'],
-    ['🦆', 'And.', 2, 'Anden har 2 ben.'],
-    ['🦉', 'Ugle.', 2, 'Uglen har 2 ben.'],
-    ['🦜', 'Papegøje.', 2, 'Papegøjen har 2 ben.'],
-    ['🦅', 'Ørn.', 2, 'Ørnen har 2 ben.'],
-    ['🐌', 'Snegl.', 0, 'Sneglen har ingen ben.'],
-    ['🐟', 'Fisk.', 0, 'Fisken har ingen ben.']
+    ['nat:spider', 'Edderkop.', 8, 'Edderkoppen har 8 ben.'],
+    ['nat:ant-6legs', 'Myre.', 6, 'Myren har 6 ben.'],
+    ['nat:ladybird-6legs', 'Mariehøne.', 6, 'Mariehønen har 6 ben.'],
+    ['nat:beetle', 'Bille.', 6, 'Billen har 6 ben.'],
+    ['nat:bee-6legs', 'Bi.', 6, 'Bien har 6 ben.'],
+    ['nat:grasshopper', 'Græshoppe.', 6, 'Græshoppen har 6 ben.'],
+    ['nat:cat-4legs', 'Kat.', 4, 'Katten har 4 ben.'],
+    ['nat:hen', 'Høne.', 2, 'Hønen har 2 ben.'],
+    ['nat:worm', 'Regnorm.', 0, 'Regnormen har ingen ben.']
   ];
   var LEG_CHOICES = [0, 2, 4, 6, 8];
 
@@ -135,6 +162,28 @@
     }
   });
 
+  // 2. The magnet (class 1). A magnet hangs over one thing; does it pull it? He picks, then the magnet comes down and
+  // the thing jumps up to it or stays where it is.
+  step({
+    id: 'n02', grade: 1, name: nm('Magneten', 'The magnet'),
+    pick: function (U) { return { k: U.int(0, MAGNET.length - 1) }; },
+    key: function (p) { return MAGNET[p.k] ? MAGNET[p.k][0] : 'x'; },
+    make: function (p, L, U) {
+      var m = MAGNET[p.k];
+      if (!m || L !== 'da') return null;
+      var ask = 'Trækker magneten i den?';
+      return {
+        ui: 'test', prompt: ask, say: ask, intro: GUESS,
+        visual: null,
+        // options: 0 pulls, 1 does not pull
+        test: { scene: 'magnet', thing: m[0], says: [m[1]], correct: m[3] ? 0 : 1 },
+        how: [H(m[2], { type: 'lab', scene: 'magnet', thing: m[0], pulls: m[3] })],
+        praise: U.pick(PRAISE),
+        key: { type: 'magnet' }
+      };
+    }
+  });
+
   // 3. The ramp (class 2). Two ramps of the same length, one steep and one flat, the same ball on each. The steeper
   // ramp starts its ball higher, so it rolls longest across the same floor.
   step({
@@ -159,8 +208,8 @@
   step({
     id: 'n04', grade: 0, name: nm('Hvor mange ben', 'How many legs'),
     pick: function (U, L, E) {
-      // the easy half: one animal of each count
-      var pool = E ? [0, 1, 6, 7] : LEGS.map(function (x, i) { return i; });
+      // the easy half: one animal of each count (spider 8, ant 6, cat 4, hen 2, worm 0)
+      var pool = E ? [0, 1, 6, 7, 8] : LEGS.map(function (x, i) { return i; });
       return { k: U.pick(pool) };
     },
     key: function (p) { return LEGS[p.k] ? LEGS[p.k][0] : 'x'; },
@@ -302,13 +351,13 @@
   });
 
   /* ---------- ladder order: easiest first inside each class ---------- */
-  var ORDER = ['n01', 'n04', 'n06', 'n05', 'n07', 'n03', 'n08'];
+  var ORDER = ['n01', 'n04', 'n06', 'n05', 'n02', 'n07', 'n03', 'n08'];
   var byId = {};
   steps.forEach(function (s) { byId[s.id] = s; });
   if (ORDER.length !== steps.length || ORDER.some(function (id) { return !byId[id]; })) throw new Error('natur: ORDER does not match the steps');
   steps = ORDER.map(function (id) { return byId[id]; });
 
-  var api = { steps: steps, walk: walk, shortest: shortest, turns: turns, midiOf: midiOf, DIRS: DIRS, float: FLOAT, legs: LEGS, legChoices: LEG_CHOICES };
+  var api = { steps: steps, walk: walk, shortest: shortest, turns: turns, midiOf: midiOf, DIRS: DIRS, float: FLOAT, magnet: MAGNET, legs: LEGS, legChoices: LEG_CHOICES };
   G.Content.natur = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })();

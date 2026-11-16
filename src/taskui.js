@@ -1048,7 +1048,7 @@ window.G = window.G || {};
     };
   }
 
-  /* ---------------- Natur og teknik (slice 5): guess then test, two strings, arrow steps ----------------
+  /* ---------------- Natur og teknik (slice 5, the magnet in 5b): guess then test, two strings, arrow steps ----------------
      Pictures come from the game (G.PICS); the tub, the water, the ramps, the balls, the strings, the grid, the stones
      and the arrows are drawn here. A test after a guess lasts at most six seconds and a tap on it skips to its end. */
   // time runs 12 times faster for the robot players (G.fast), as G.wait does
@@ -1118,6 +1118,48 @@ window.G = window.G || {};
     return contact + (TUB.bottom - contact) * (1 - (1 - v) * (1 - v));
   }
   var FLOAT_T = 2.3;
+
+  /* the magnet (slice 5b): 520 x 300, the same size as the tub. A horseshoe magnet on a rope over a table, one thing on
+     the table. It comes down; a thing it pulls jumps up and sticks, then both lift; a thing it does not pull stays put. */
+  var MAG = { s: 96, top: 46, low: 94, lift: 60, table: 262, size: 104 };
+  MAG.a = MAG.s * 0.32; MAG.b = MAG.s * 0.36; MAG.t = MAG.s * 0.26;
+  MAG.rest = MAG.table - MAG.size * 0.5 + 6;    // the thing's middle when it lies on the table
+  MAG.stick = MAG.b + MAG.size * 0.43;          // the thing's middle below the magnet's middle when it sticks
+  // a red horseshoe magnet with silver ends, opening down, centred on 0,0 (its ends reach down to y = MAG.b)
+  function magnetSvg() {
+    var a = MAG.a, b = MAG.b, t = MAG.t, d = 'M' + (-a) + ' ' + b + 'V0A' + a + ' ' + a + ' 0 0 1 ' + a + ' 0V' + b;
+    var tip = function (x) { return '<path d="M' + x + ' ' + (b - t * 0.85) + 'V' + b + '" stroke="#0b1430" stroke-width="' + (t + 10) + '"/><path d="M' + x + ' ' + (b - t * 0.85 + 3) + 'V' + (b - 5) + '" stroke="#dfe6f5" stroke-width="' + t + '"/>'; };
+    return '<path d="' + d + '" fill="none" stroke="#0b1430" stroke-width="' + (t + 10) + '"/>' +
+      '<path d="' + d + '" fill="none" stroke="#ff4f5e" stroke-width="' + t + '"/>' +
+      '<path d="M' + (-a + t * 0.18) + ' ' + (b * 0.4) + 'V0A' + (a - t * 0.18) + ' ' + (a - t * 0.18) + ' 0 0 1 ' + (-a * 0.2) + ' ' + (-a + t * 0.18) + '" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="' + (t * 0.22) + '" stroke-linecap="round"/>' +
+      tip(-a) + tip(a);
+  }
+  function magnetStageSvg(svgNode, thing) {
+    add(svgNode, 'ellipse', { cx: 260, cy: MAG.table + 22, rx: 170, ry: 10, fill: 'rgba(0,0,0,.25)' });
+    add(svgNode, 'rect', { x: 100, y: MAG.table, width: 320, height: 22, rx: 9, fill: '#c98a4b', stroke: '#0b1430', 'stroke-width': 5 });
+    var rope = add(svgNode, 'path', { d: '', stroke: '#f4f8ff', 'stroke-width': 5, 'stroke-linecap': 'round', 'class': 'nt-rope' });
+    var g = add(svgNode, 'g', { 'class': 'nt-thing' }, thingSvg(thing, MAG.size));
+    var m = add(svgNode, 'g', { 'class': 'nt-magnet' }, magnetSvg());
+    function at(my, ty, rot) {
+      m.setAttribute('transform', 'translate(260 ' + my.toFixed(1) + ') rotate(' + (rot || 0).toFixed(1) + ')');
+      rope.setAttribute('d', 'M260 -14V' + (my - MAG.a - MAG.t / 2).toFixed(1));
+      g.setAttribute('transform', 'translate(260 ' + ty.toFixed(1) + ')');
+    }
+    at(MAG.top, MAG.rest);
+    return { thing: g, magnet: m, rope: rope, at: at };
+  }
+  // where the magnet and the thing are t seconds after the magnet is let go
+  function magnetAt(pulls, t) {
+    var down = 0.7, ease = function (u) { u = Math.max(0, Math.min(1, u)); return 1 - (1 - u) * (1 - u); };
+    var my = MAG.top + (MAG.low - MAG.top) * ease(t / down);
+    if (!pulls) return { my: my, ty: MAG.rest, rot: t > down ? Math.sin((t - down) * 14) * 5 * Math.exp(-(t - down) * 2.2) : 0 };
+    var jump = 0.2, u = (t - down) / jump, stuckY = MAG.low + MAG.stick;
+    if (t < down) return { my: my, ty: MAG.rest };
+    if (u < 1) return { my: MAG.low, ty: MAG.rest + (stuckY - MAG.rest) * u * u };
+    var lift = ease((t - down - jump - 0.35) / 0.8), m2 = MAG.low + (MAG.lift - MAG.low) * lift;
+    return { my: m2, ty: m2 + MAG.stick };
+  }
+  var MAGNET_T = 2.2;
 
   /* the ramps: 1040 x 260, a lane of 130 each. The same length of ramp, the steep one starts its ball higher */
   // len: the ramp; the ball starts `run` from its foot (the same on both ramps), so on the steep one it starts higher
@@ -1251,6 +1293,33 @@ window.G = window.G || {};
         return anim(FLOAT_T, function (t) {
           if (!splashed && t >= 0.42) { splashed = true; sfx('splash'); stage.classList.add('is-splash'); }
           tub.at(floatY(floats, t), floats ? Math.sin(t * 5) * 4 * Math.exp(-t) : Math.min(8, t * 5));
+        }, done);
+      };
+    } else if (ts.scene === 'magnet') {
+      stage = el('div', 'nt-stage', null, wrap);
+      var mg = magnetStageSvg(svgEl(stage, TUB.w, TUB.h, 'nt-svg'), ts.thing);
+      var mhit = el('button', 'nt-thingbtn', null, stage);
+      mhit.type = 'button'; mhit.dataset.act = 'thing'; mhit.setAttribute('aria-label', (ts.says || [])[0] || '');
+      mhit.addEventListener('click', function () { if (run) return; sfx('tap'); if (ts.says) say(ts.says[0], { cut: true }); stage.classList.remove('is-talk'); void stage.offsetWidth; stage.classList.add('is-talk'); });
+      var mside = el('div', 'nt-choices', null, wrap);
+      // 0: pulls (the ball stuck to the magnet), 1: does not pull (the magnet up, the ball down on the floor)
+      var MICONS = [
+        '<svg viewBox="0 0 120 120" aria-hidden="true"><g transform="translate(60 34) scale(.42)">' + magnetSvg() + '</g><circle cx="60" cy="66" r="15" fill="#ffc93c" stroke="#0b1430" stroke-width="5"/><path d="M22 60q-8 8 0 16M98 60q8 8 0 16" stroke="#f4f8ff" stroke-width="4" fill="none" stroke-linecap="round"/><rect x="14" y="100" width="92" height="9" rx="4" fill="#c98a4b" stroke="#0b1430" stroke-width="3"/></svg>',
+        '<svg viewBox="0 0 120 120" aria-hidden="true"><g transform="translate(60 26) scale(.42)">' + magnetSvg() + '</g><circle cx="60" cy="84" r="15" fill="#ffc93c" stroke="#0b1430" stroke-width="5"/><rect x="14" y="100" width="92" height="9" rx="4" fill="#c98a4b" stroke="#0b1430" stroke-width="3"/></svg>'
+      ];
+      MICONS.forEach(function (ic, i) {
+        var b = el('button', 'nt-pick', ic, mside);
+        b.type = 'button'; b.dataset.act = 'guess-' + i; b.setAttribute('aria-label', i ? 'Nej' : 'Ja');
+        b.addEventListener('click', function () { guess(i); });
+        btns.push(b);
+      });
+      var pulls = ts.correct === 0;
+      shown = function () { var e = magnetAt(pulls, MAGNET_T); mg.at(e.my, e.ty, 0); };
+      play = function (done) {
+        var snapped = false;
+        return anim(MAGNET_T, function (t) {
+          if (pulls && !snapped && t >= 0.9) { snapped = true; sfx('snap'); }
+          var e = magnetAt(pulls, t); mg.at(e.my, e.ty, e.rot);
         }, done);
       };
     } else {
@@ -1423,6 +1492,9 @@ window.G = window.G || {};
     if (v.scene === 'float') {
       var tub = tubSvg(svgEl(box, TUB.w, TUB.h, 'nt-svg'), v.thing);
       tub.rope.style.display = 'none'; tub.at(v.floats ? TUB.float : TUB.bottom, v.floats ? 0 : 8);
+    } else if (v.scene === 'magnet') {
+      var mgs = magnetStageSvg(svgEl(box, TUB.w, TUB.h, 'nt-svg'), v.thing), me = magnetAt(!!v.pulls, MAGNET_T);
+      mgs.at(me.my, me.ty, 0);
     } else if (v.scene === 'ramp') {
       var s = svgEl(box, 1040, 260, 'nt-svg');
       var lanes = [0, 1].map(function (i) { return rampLaneSvg(s, i, v.angles[i], v.ball); });

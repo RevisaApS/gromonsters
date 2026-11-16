@@ -617,7 +617,7 @@ window.G = window.G || {};
         try { task = brain && brain.next ? brain.next({ power: p, today: today }) : null; } catch (e) { console.error('brain.next', e); }
         if (task && task.ui && !seen(task)) return task;
       }
-      // every question of his steps has been asked in this battle (Natur og teknik's float game has five): the step
+      // every question of his steps has been asked in this battle (a step with few puzzles): the step
       // above in one of his topics, rather than a hit without a question
       var order = [own].concat(others).filter(function (p) { return hard.indexOf(p) >= 0; });
       for (var k = 0; k < order.length; k++) { var up = stretchTask(order[k]); if (up) return up; }

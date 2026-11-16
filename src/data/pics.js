@@ -168,3 +168,24 @@ window.G.PICS = {
 "scene:C12": "assets/pics/scene-C12.webp",
 "scene:C13": "assets/pics/scene-C13.webp"
 };
+/* NAT_PICS: the Natur og teknik pictures (slice 5b), made by tools/cut_natur.py. Keyed by name, not emoji:
+   four of them (ant, bee, ladybird, cat) have an older picture under the emoji, kept for the other games. */
+window.G.PICS["nat:nail"] = "assets/pics/nail.webp";
+window.G.PICS["nat:screw"] = "assets/pics/screw.webp";
+window.G.PICS["nat:paper-clip"] = "assets/pics/paper-clip.webp";
+window.G.PICS["nat:scissors"] = "assets/pics/scissors.webp";
+window.G.PICS["nat:coin-gold"] = "assets/pics/coin-gold.webp";
+window.G.PICS["nat:feather"] = "assets/pics/feather.webp";
+window.G.PICS["nat:leaf"] = "assets/pics/leaf.webp";
+window.G.PICS["nat:stick"] = "assets/pics/stick.webp";
+window.G.PICS["nat:beach-ball"] = "assets/pics/beach-ball.webp";
+window.G.PICS["nat:spider"] = "assets/pics/spider.webp";
+window.G.PICS["nat:ant-6legs"] = "assets/pics/ant-6legs.webp";
+window.G.PICS["nat:ladybird-6legs"] = "assets/pics/ladybird-6legs.webp";
+window.G.PICS["nat:beetle"] = "assets/pics/beetle.webp";
+window.G.PICS["nat:bee-6legs"] = "assets/pics/bee-6legs.webp";
+window.G.PICS["nat:worm"] = "assets/pics/worm.webp";
+window.G.PICS["nat:cat-4legs"] = "assets/pics/cat-4legs.webp";
+window.G.PICS["nat:hen"] = "assets/pics/hen.webp";
+window.G.PICS["nat:grasshopper"] = "assets/pics/grasshopper.webp";
+/* /NAT_PICS */
