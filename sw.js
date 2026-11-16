@@ -56,6 +56,8 @@ self.addEventListener('activate', function (e) {
 });
 self.addEventListener('fetch', function (e) {
   var req = e.request;
+  // only this site's own GETs are kept. The play data rows (src/playlog.js) are POSTs to the database, on another
+  // address: the worker leaves them to the browser, never answers them from the copy and never keeps them.
   if (req.method !== 'GET' || req.headers.has('range')) return;
   var url;
   try { url = new URL(req.url); } catch (er) { return; }

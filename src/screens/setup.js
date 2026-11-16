@@ -185,6 +185,8 @@ window.G = window.G || {};
       if (name) p.name = name;
       STARTERS.forEach(function (s) { if (s !== picked) p.dex[s] = { stage: 'met', metDay: G.today(), caughtDay: null, grownDay: null }; });
       G.save();
+      // play data (slice 6): the class and the starting class per topic; the name travels as the row's player
+      G.plog('setup', { grade: grade, levels: levels || null, starter: picked, named: !!name, lang: G.lang, place: G.slot + 1 });
       G.go('battle', { wildId: 'crabbi', regionId: 'bay', mode: 'intro' });
     });
     body.appendChild(choose);

@@ -36,9 +36,11 @@ window.G = window.G || {};
   });
   G.i18n.add({
     da: { 'pa.players': 'Spillere', 'pa.del': 'Slet spiller', 'pa.delQ': 'Slet {name}? Hele spillet for denne spiller forsvinder.', 'pa.delYes': 'Ja, slet', 'pa.delNo': 'Nej',
-      'pa.aiVoice': 'Den danske stemme er lavet med AI.', 'pa.playing': 'Spiller nu' },
+      'pa.aiVoice': 'Den danske stemme er lavet med AI.', 'pa.playing': 'Spiller nu',
+      'pa.data': 'Send spilledata', 'pa.dataNote': 'Navn, tid og rigtige svar. Aldrig hvad der står eller bliver sagt.' },
     en: { 'pa.players': 'Players', 'pa.del': 'Delete player', 'pa.delQ': 'Delete {name}? Everything in this game will be gone.', 'pa.delYes': 'Yes, delete', 'pa.delNo': 'No',
-      'pa.aiVoice': 'The Danish voice is made with AI.', 'pa.playing': 'Playing now' }
+      'pa.aiVoice': 'The Danish voice is made with AI.', 'pa.playing': 'Playing now',
+      'pa.data': 'Send play data', 'pa.dataNote': 'Name, time and right answers. Never what is written or said.' }
   });
   var S = null;
   var NAME_MAX = 12;
@@ -232,6 +234,15 @@ window.G = window.G || {};
     b.appendChild(row(G.t('pa.music'), mus));
     b.appendChild(row(G.t('pa.sfx'), slider(G.settings.sfx, function (v) { G.settings.sfx = v; volumes(); G.save(); })));
     b.appendChild(row(G.t('pa.still'), onOff(G.settings.still, function (v) { G.settings.still = v; G.applyStill(); G.save(); })));
+    // play data (slice 6, src/playlog.js): on from the start, kept on the tablet with the other settings. Off: nothing queues or leaves.
+    var dataSw = onOff(G.settings.playData !== false, function (v) {
+      G.settings.playData = !!v; G.save();
+      try { if (G.playlog && G.playlog.setOn) G.playlog.setOn(!!v); } catch (e) { /* the log never breaks the page */ }
+    });
+    [].forEach.call(dataSw.children, function (x, i) { x.dataset.act = 'playdata-' + (i ? 'off' : 'on'); });
+    var dr = row(G.t('pa.data'), dataSw); dr.classList.add('is-line');
+    dr.appendChild(G.el('div', 'set-note', G.t('pa.dataNote')));
+    a.appendChild(dr); // the left column has room under the daily limit; the right one is full
     cols.appendChild(a); cols.appendChild(b);
     body.appendChild(cols);
   }

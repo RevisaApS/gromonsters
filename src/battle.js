@@ -281,6 +281,19 @@ window.G = window.G || {};
     };
     S.wLifeMax = S.wLife = mode === 'intro' ? part(lifeOf(wildKraft), RULES.introLife) : lifeOf(wildKraft);
     function me() { return fighters[S.fi]; }
+    // play data (slice 6, src/playlog.js): one id ties this battle's rows together. The log never stops the battle.
+    var LOG = { battle: Math.random().toString(36).slice(2, 10), t0: Date.now() };
+    function plog(kind, d) { try { if (G.playlog && G.playlog.on) G.playlog.log(kind, Object.assign({ battle: LOG.battle }, d)); } catch (e) { /* ignore */ } }
+    function plogTask(kind, task, d) { try { if (G.playlog && G.playlog.on) G.playlog[kind](task, Object.assign({ battle: LOG.battle }, d)); } catch (e) { /* ignore */ } }
+    function secsSince(t) { return Math.round((Date.now() - t) / 100) / 10; }
+    // where he stands in a topic now (the step id), to log a step up or down
+    function stepNow(power) { try { var sm = brain && brain.summary ? brain.summary() : null; return sm && sm[power] ? sm[power].stepId : null; } catch (e) { return null; } }
+    function brainRecord(task, res) {
+      var before = stepNow(task.power), r = null;
+      try { if (brain && brain.record) r = brain.record(task, res); } catch (e) { console.error('brain.record', e); }
+      if (r && (r.stepUp || r.stepDown)) plog('step', { topic: task.power, from: before, to: stepNow(task.power), dir: r.stepUp ? 'up' : 'down', by: res.super ? 'super' : 'answers' });
+      return r;
+    }
     var DEAD = { dead: true };
     function w(ms) { return rawWait(ms).then(function () { if (S.dead) throw DEAD; }); }
     function race(p, ms) { return Promise.race([Promise.resolve(p).catch(function () {}), rawWait(ms)]).then(function () { if (S.dead) throw DEAD; }); }
@@ -585,7 +598,7 @@ window.G = window.G || {};
     function record(task, ok, helped) {
       var rec = { power: task.power, step: task.step, ok: !!ok, firstTry: !!ok, helped: !!helped };
       S.records.push(rec);
-      try { if (brain && brain.record) brain.record(task, { ok: rec.ok, firstTry: rec.firstTry, helped: rec.helped, today: today }); } catch (e) { console.error('brain.record', e); }
+      brainRecord(task, { ok: rec.ok, firstTry: rec.firstTry, helped: rec.helped, today: today });
     }
     // the topics this battle may use: those that are on for this player (the parent page), from the brain
     function topics() {
@@ -636,6 +649,9 @@ window.G = window.G || {};
 
     /* ---- the flow ---- */
     async function run() {
+      plog('battle_start', { wild: wildC.id, mode: mode, wild_power: wildKraft, region: o.regionId || wildC.region || null,
+        fighter: fighters[0].baseId, power: fighters[0].kraft, team: fighters.map(function (f) { return f.baseId; }),
+        team_power: fighters.reduce(function (a, f) { return a + f.kraft; }, 0) });
       await entrance();
       while (!S.dead) {
         if (S.wLife <= 0) { await heartMoment(); S.result = mode === 'intro' ? 'caught' : 'won'; S.xp = 1; S.xpBy[me().baseId] = 1; await catchMoment(); break; }
@@ -676,18 +692,23 @@ window.G = window.G || {};
       setPhase('task');
       openTask(task, null, 'task');
       panel.classList.toggle('is-super', superTry);
-      if (mode === 'intro' && S.tasks === 1) rawWait(700).then(function () { if (S.ui && S.phase === 'task' && S.task === task) S.ui.hint(S.solution); });
+      var hinted = mode === 'intro' && S.tasks === 1;
+      if (hinted) rawWait(700).then(function () { if (S.ui && S.phase === 'task' && S.task === task) S.ui.hint(S.solution); });
+      var asked = Date.now();
       var inp = await waitInput();
       if (S.dead) throw DEAD;
       clearPointer();
+      var secs = secsSince(asked);
       // he answered before the voice got to the question: it is no longer read out
       try { if (G.voice && G.voice.unsay) G.voice.unsay(task.say || task.prompt); } catch (e) { /* voice is optional */ }
       var res = inp.kind === 'answer' ? check(task, inp.value) : null;
+      // one row per task he answers: right on the first try, or shown how (a miss or "?")
+      plogTask('answer', task, { first_try: !!(res && res.ok), shown: !(res && res.ok), idk: inp.kind !== 'answer', secs: secs, super: superTry, hinted: hinted || undefined });
       if (res && res.ok) {
         if (superTry) {
           S.records.push({ power: task.power, step: task.step, ok: true, firstTry: false, helped: false, stretch: true, kind: 'super' });
           // a super hit is a task from the step above: getting it right moves him up to that step
-          try { if (brain && brain.record) brain.record(task, { ok: true, firstTry: true, helped: false, super: true, today: today }); } catch (e) { console.error('brain.record', e); }
+          brainRecord(task, { ok: true, firstTry: true, helped: false, super: true, today: today });
         } else record(task, true, false);
         await rightHit(task, res, inp.value, superTry);
         panel.classList.remove('is-super');
@@ -962,6 +983,9 @@ window.G = window.G || {};
       await wildStrike();
       S.records.push({ power: task.power, step: task.step, ok: true, firstTry: false, helped: false, stretch: true, kind: 'watch', teach: task.teach || null,
         firstWatch: S.lastThink ? S.lastThink.first : null, thinkMs: S.lastThink ? S.lastThink.ms : null, beats: S.lastThink ? S.lastThink.beats : null, skipped: S.lastThink ? S.lastThink.skipped : null });
+      // the wild one's teaching turn: he only watches, so it is its own kind of row, never an answer
+      plogTask('watch', task, { teach: task.teach || null, first_watch: S.lastThink ? S.lastThink.first : null,
+        secs: S.lastThink ? Math.round(S.lastThink.ms / 100) / 10 : null, skipped: S.lastThink ? S.lastThink.skipped : null });
       S.lastThink = null;
       R.classList.remove('is-wildturn');
       S.watch = null; S.watchSay = null;
@@ -1113,7 +1137,7 @@ window.G = window.G || {};
       S.task = task; S.solution = solutionFor(task); S.heartWhy = null;
       showStory(task);
       clearTimeout(lineTimer); lineEl.classList.remove('is-on');
-      var first = true, firstOk = false;
+      var first = true, firstOk = false, asked = Date.now();
       for (;;) {
         setPhase('heart');
         openTask(task, first ? null : S.solution, 'heart');
@@ -1137,6 +1161,7 @@ window.G = window.G || {};
         await spoken();
       }
       S.heartWhy = null;
+      plogTask('answer', task, { first_try: firstOk, shown: !firstOk, secs: secsSince(asked), heart: true });
       record(task, firstOk, !firstOk);
       S.heart = true;
       S.sparks += 3;
@@ -1386,6 +1411,16 @@ window.G = window.G || {};
     function finish(result, again) {
       if (S.done) return;
       S.done = true; S.dead = true; S.phase = 'done'; S.result = result;
+      try {
+        // the same count as the marks on the result card: a tick for one he got right by himself, a question mark for one he was shown
+        var mine = S.records.filter(function (r) { return r.kind !== 'watch' && r.power !== 'hjerte'; });
+        var right = mine.filter(function (r) { return r.ok && !r.helped; }).length;
+        plog('battle_end', { result: result, won: result === 'won' || result === 'caught', wild: wildC.id, mode: mode,
+          mins: Math.round((Date.now() - LOG.t0) / 6000) / 10, tasks: mine.length, right: right, shown: mine.length - right,
+          super_right: mine.filter(function (r) { return r.kind === 'super' && r.ok; }).length,
+          watched: S.records.filter(function (r) { return r.kind === 'watch'; }).length, heart: !!S.heart,
+          power_gained: S.xp | 0, fighter: me().baseId, again: !!again });
+      } catch (e) { /* the log never breaks the battle */ }
       cleanup();
       var out = { result: result, wildId: wildC.id, sparks: S.sparks, heart: S.heart, records: S.records.slice(), xpBy: Object.assign({}, S.xpBy), again: !!again };
       try { if (o.onDone) o.onDone(out); } catch (e) { console.error('Battle onDone', e); }

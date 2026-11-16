@@ -41,7 +41,7 @@ window.G = window.G || {};
   };
 
   // ---------- saved data ----------
-  function defaults() { return { lang: 'da', music: 0.6, musicOn: true, sfx: 0.8, voice: true, still: false }; }
+  function defaults() { return { lang: 'da', music: 0.6, musicOn: true, sfx: 0.8, voice: true, still: false, playData: true }; }
   var PLACES = 5; // player places
   function blank() { return { settings: defaults(), last: 0, profiles: [null, null, null, null, null] }; }
   function load() {
@@ -322,6 +322,7 @@ window.G = window.G || {};
     var from = G.teamKraft(p) - (joined >= 0 ? G.kraftOf(id, p) : 0);
     var opened = G.openRegions(p);
     G.save();
+    G.plog('friend', { friend: id, joined: joined, team_power: G.teamKraft(p), opened: opened });
     return { id: id, joined: joined, teamFrom: from, teamTo: G.teamKraft(p), opened: opened };
   };
   G.dailyDone = function () { return !!G.friendToday(); };
@@ -392,6 +393,10 @@ window.G = window.G || {};
     }
     var opened = G.openRegions(p);
     G.save(); // everything is saved before any celebration plays
+    // play data (slice 6): a Gromonster grew or changed form, and the first battle's friend
+    grown.forEach(function (id) { G.plog('growth', { id: id, form: 'grown', power: G.kraftOf(id, p) }); });
+    evolvedIds.forEach(function (id) { G.plog('growth', { id: id, form: 'evolved', to: G.formId(p, id), power: G.kraftOf(id, p) }); });
+    if (newFriend) G.plog('friend', { friend: newFriend, joined: joined, first: true, team_power: G.teamKraft(p), opened: opened });
     return {
       teamFrom: teamFrom, teamTo: G.teamKraft(p), opened: opened, unlocked: opened,
       grown: grown, evolved: evolved, evolvedIds: evolvedIds, strength: gainXp, team: teamGain,
@@ -401,6 +406,8 @@ window.G = window.G || {};
   };
 
   // ---------- small helpers ----------
+  // play data (slice 6, src/playlog.js): one row; never stops the game, and does nothing when the log is off
+  G.plog = function (kind, data) { try { if (G.playlog && G.playlog.on) G.playlog.log(kind, data); } catch (e) { /* the log never breaks the game */ } };
   G.el = function (tag, className, html) {
     var e = document.createElement(tag);
     if (className) e.className = className;

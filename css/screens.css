@@ -528,7 +528,11 @@ button:focus-visible{outline:4px solid var(--aur-3);outline-offset:3px}
 .pa-side .pa-fact b{font-size:24px}
 .pa-fact{display:flex;flex-direction:column;gap:2px;padding:12px 20px;border-radius:var(--r-m);background:rgba(11,20,48,.8);border:2px solid var(--line);font-size:18px;color:var(--paper-dim)}
 .pa-fact b{font-family:var(--body);font-weight:800;font-size:32px;color:#fff}
-.set-cols{display:grid;grid-template-columns:1.25fr 1fr;gap:28px}
+.set-cols{display:grid;grid-template-columns:1.25fr 1fr;gap:28px;align-items:start;height:100%;overflow-y:auto;overscroll-behavior:contain;padding-bottom:12px;scrollbar-width:none}
+.set-cols::-webkit-scrollbar{display:none}
+/* slice 6: Send spilledata, the label and its switch on one line, the note under them */
+.set-row.is-line{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:16px;row-gap:6px}
+.set-row.is-line .set-note{grid-column:1 / -1}
 .set-col{display:flex;flex-direction:column;gap:16px}
 .set-row{display:flex;flex-direction:column;gap:8px;padding:14px 18px;border-radius:var(--r-m);background:rgba(11,20,48,.75);border:2px solid var(--line)}
 .set-label{font-family:var(--body);font-weight:800;font-size:20px;color:#fff}
